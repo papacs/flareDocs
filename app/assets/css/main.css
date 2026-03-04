@@ -183,4 +183,172 @@ body {
     @apply mt-3 text-sm leading-6 sm:text-base;
     color: var(--fd-muted);
   }
+
+  .fd-editor-shell {
+    @apply overflow-hidden rounded-[1.5rem] border bg-white/80;
+    border-color: rgba(31, 41, 55, 0.1);
+  }
+
+  .fd-editor-shell .bytemd {
+    @apply border-0 bg-transparent;
+  }
+
+  .fd-editor-shell .bytemd-toolbar {
+    @apply border-b px-2 py-2;
+    border-color: rgba(31, 41, 55, 0.08);
+    background: rgba(255, 248, 238, 0.92);
+  }
+
+  .fd-editor-shell .bytemd-toolbar-icon {
+    @apply rounded-lg;
+  }
+
+  .fd-editor-shell .bytemd-status {
+    @apply border-t px-4 py-2 text-xs;
+    border-color: rgba(31, 41, 55, 0.08);
+    background: rgba(255, 248, 238, 0.72);
+    color: var(--fd-muted);
+  }
+
+  .fd-editor-shell .bytemd-body {
+    min-height: 25rem;
+  }
+
+  .fd-editor-shell .CodeMirror,
+  .fd-editor-shell .bytemd-preview {
+    min-height: 25rem;
+  }
+
+  .fd-editor-shell .bytemd-preview {
+    padding: 1.25rem 1.4rem;
+    background: rgba(255, 253, 249, 0.96);
+  }
+
+  .fd-editor-shell .bytemd-tab {
+    @apply rounded-full px-4 py-2 text-sm font-semibold;
+  }
+
+  .fd-editor-shell .bytemd-tab-active {
+    background: rgba(31, 41, 55, 0.92);
+    color: white;
+  }
+
+  .markdown-body {
+    @apply mx-auto max-w-3xl text-[15px] leading-8;
+    color: var(--fd-ink);
+  }
+
+  .markdown-body > * + * {
+    margin-top: 1rem;
+  }
+
+  .markdown-body h1,
+  .markdown-body h2,
+  .markdown-body h3,
+  .markdown-body h4 {
+    color: var(--fd-ink);
+    font-family: var(--fd-font-serif);
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .markdown-body h1 {
+    font-size: 2rem;
+    margin-top: 0;
+  }
+
+  .markdown-body h2 {
+    font-size: 1.65rem;
+    padding-top: 0.6rem;
+  }
+
+  .markdown-body h3 {
+    font-size: 1.3rem;
+    padding-top: 0.4rem;
+  }
+
+  .markdown-body p,
+  .markdown-body li,
+  .markdown-body blockquote {
+    color: var(--fd-ink);
+  }
+
+  .markdown-body a {
+    color: #1d4ed8;
+    text-decoration: underline;
+    text-decoration-thickness: 0.08em;
+    text-underline-offset: 0.2em;
+  }
+
+  .markdown-body ul,
+  .markdown-body ol {
+    padding-left: 1.5rem;
+  }
+
+  .markdown-body ul {
+    list-style: disc;
+  }
+
+  .markdown-body ol {
+    list-style: decimal;
+  }
+
+  .markdown-body blockquote {
+    border-left: 3px solid rgba(180, 83, 9, 0.35);
+    background: rgba(255, 247, 236, 0.88);
+    border-radius: 0 1rem 1rem 0;
+    padding: 0.9rem 1rem;
+  }
+
+  .markdown-body hr {
+    border: 0;
+    border-top: 1px solid rgba(31, 41, 55, 0.12);
+    margin: 1.6rem 0;
+  }
+
+  .markdown-body code {
+    border-radius: 0.45rem;
+    background: rgba(31, 41, 55, 0.08);
+    padding: 0.15rem 0.4rem;
+    font-size: 0.92em;
+  }
+
+  .markdown-body pre {
+    overflow-x: auto;
+    border-radius: 1rem;
+    background: #1f2937;
+    color: #f8fafc;
+    padding: 1rem 1.1rem;
+  }
+
+  .markdown-body pre code {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+  }
+
+  .markdown-body table {
+    width: 100%;
+    overflow: hidden;
+    border-collapse: collapse;
+    border-radius: 1rem;
+    border: 1px solid rgba(31, 41, 55, 0.12);
+  }
+
+  .markdown-body th,
+  .markdown-body td {
+    border: 1px solid rgba(31, 41, 55, 0.08);
+    padding: 0.75rem 0.85rem;
+    text-align: left;
+  }
+
+  .markdown-body th {
+    background: rgba(255, 247, 236, 0.88);
+    font-weight: 700;
+  }
+
+  .markdown-body img {
+    border-radius: 1rem;
+    max-width: 100%;
+  }
 }

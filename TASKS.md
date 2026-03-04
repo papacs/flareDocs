@@ -144,8 +144,10 @@ Date: 2026-03-04
 
 - Fixed Nuxt server route discovery by pointing [nuxt.config.ts](/mnt/e/workspace/flareDocs/nuxt.config.ts) at [app/server](/mnt/e/workspace/flareDocs/app/server)
 - Added bootstrap admin seeding in [bootstrap.ts](/mnt/e/workspace/flareDocs/app/server/utils/bootstrap.ts) so `admin / admin` exists by default
-- Added lightweight locale state in [useLocale.ts](/mnt/e/workspace/flareDocs/app/composables/useLocale.ts) and a global switcher in [LocaleSwitch.vue](/mnt/e/workspace/flareDocs/app/components/LocaleSwitch.vue)
+- Added lightweight locale state in [useAppLocale.ts](/mnt/e/workspace/flareDocs/app/composables/useAppLocale.ts) and a global switcher in [LocaleSwitch.vue](/mnt/e/workspace/flareDocs/app/components/LocaleSwitch.vue)
 - Localized the login, dashboard, workspace, and audit screens with Chinese as the default locale
+- Switched the Markdown editor to tabbed preview and added richer document styles in [main.css](/mnt/e/workspace/flareDocs/app/assets/css/main.css)
+- Corrected remote D1 migration execution to include `--remote` in [package.json](/mnt/e/workspace/flareDocs/package.json)
 - Validation now needs a fresh `pnpm install` on the active OS because this workspace has mixed Linux/Windows native dependencies
 
 ## In Progress

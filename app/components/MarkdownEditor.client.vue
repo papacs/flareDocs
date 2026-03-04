@@ -74,13 +74,16 @@ async function uploadImages(files: File[]) {
 </script>
 
 <template>
-  <component
-    :is="ByteMdEditor"
-    :value="props.modelValue"
-    :plugins="plugins"
-    :placeholder="props.placeholder ?? 'Write in Markdown...'"
-    :upload-images="uploadImages"
-    mode="auto"
-    @change="handleChange"
-  />
+  <div class="fd-editor-shell">
+    <component
+      :is="ByteMdEditor"
+      :value="props.modelValue"
+      :plugins="plugins"
+      :placeholder="props.placeholder ?? 'Write in Markdown...'"
+      :upload-images="uploadImages"
+      mode="tab"
+      :preview-debounce="120"
+      @change="handleChange"
+    />
+  </div>
 </template>

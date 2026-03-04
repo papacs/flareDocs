@@ -75,7 +75,7 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'workspace.conflict': ({ version, updatedAt }) =>
       `检测到保存冲突。当前最新版本是 ${version}，更新时间是 ${updatedAt}。请先重新加载最新内容再保存。`,
     'workspace.folderHint': '这是文档树中的一个目录。选择子文档阅读或编辑内容，或者在该目录下新建条目。',
-    'workspace.uploadHint': '可直接拖拽图片进编辑器，或用工具栏插图。窄屏下编辑器会自动切换布局。',
+    'workspace.uploadHint': '可直接拖拽图片进编辑器，或用工具栏插图。编辑时在“编辑 / 预览”标签间切换即可查看渲染效果。',
     'workspace.pickDocument': '从左侧树中选择一个文档开始阅读或编辑。',
     'audit.kicker': '审计',
     'audit.activity': ({ name }) => `${name} 活动记录`,
@@ -164,7 +164,7 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'workspace.conflict': ({ version, updatedAt }) =>
       `Conflict detected. Current version is ${version}, updated at ${updatedAt}. Reload the latest document before saving again.`,
     'workspace.folderHint': 'This folder is part of the document tree. Select a child document to read or edit content, or create a new item beneath this folder.',
-    'workspace.uploadHint': 'Drag images into the editor or use the toolbar image action. The editor switches layout automatically on narrow screens.',
+    'workspace.uploadHint': 'Drag images into the editor or use the toolbar image action. Use the Write / Preview tabs while editing to inspect the rendered result.',
     'workspace.pickDocument': 'Pick a document from the tree to start reading or editing.',
     'audit.kicker': 'Audit',
     'audit.activity': ({ name }) => `${name} activity`,

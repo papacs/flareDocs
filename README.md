@@ -244,8 +244,11 @@ The repository also includes a post-bootstrap polish pass:
 
 - [nuxt.config.ts](/mnt/e/workspace/flareDocs/nuxt.config.ts) now points `serverDir` to [app/server](/mnt/e/workspace/flareDocs/app/server) so Nitro can register the API routes that live there
 - [bootstrap.ts](/mnt/e/workspace/flareDocs/app/server/utils/bootstrap.ts) seeds a default `admin / admin` account when the auth layer is first touched
-- [useLocale.ts](/mnt/e/workspace/flareDocs/app/composables/useLocale.ts) and [LocaleSwitch.vue](/mnt/e/workspace/flareDocs/app/components/LocaleSwitch.vue) add a lightweight `zh-CN` / `en` switch with Chinese as the default locale
+- [useAppLocale.ts](/mnt/e/workspace/flareDocs/app/composables/useAppLocale.ts) and [LocaleSwitch.vue](/mnt/e/workspace/flareDocs/app/components/LocaleSwitch.vue) add a lightweight `zh-CN` / `en` switch with Chinese as the default locale
 - Login, dashboard, workspace, and audit screens now read UI text from the locale store
+- [MarkdownEditor.client.vue](/mnt/e/workspace/flareDocs/app/components/MarkdownEditor.client.vue) now uses tabbed write/preview mode instead of the earlier split layout
+- [main.css](/mnt/e/workspace/flareDocs/app/assets/css/main.css) now includes document-style Markdown rendering and editor skinning
+- [package.json](/mnt/e/workspace/flareDocs/package.json) now runs remote D1 migrations with `--remote`
 
 Current caveat:
 

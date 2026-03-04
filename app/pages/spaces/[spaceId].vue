@@ -470,7 +470,7 @@ async function deleteDocument() {
 
             <div
               v-else
-              class="prose prose-slate max-w-none rounded-[1.6rem] bg-white/70 p-4 sm:p-6"
+              class="rounded-[1.6rem] bg-white/70 p-4 sm:p-6"
             >
               <MarkdownViewer :value="selectedDocument.content" />
             </div>
