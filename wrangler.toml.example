@@ -1,0 +1,16 @@
+name = "flaredocs"
+compatibility_date = "2026-03-04"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "flaredocs-db"
+database_id = "replace-with-your-d1-database-id"
+preview_database_id = "flaredocs-local-db"
+migrations_dir = "db/migrations"
+
+[[r2_buckets]]
+binding = "R2_ASSETS"
+bucket_name = "replace-with-your-r2-bucket"
+preview_bucket_name = "flaredocs-assets-preview"

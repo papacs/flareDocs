@@ -1,0 +1,186 @@
+@import 'tailwindcss';
+@import '@nuxt/ui';
+
+:root {
+  color-scheme: light;
+  --fd-bg: #f4efe7;
+  --fd-bg-soft: #efe7d8;
+  --fd-ink: #1f2937;
+  --fd-muted: #5f6472;
+  --fd-panel: rgba(255, 251, 245, 0.82);
+  --fd-panel-strong: rgba(255, 250, 243, 0.94);
+  --fd-line: rgba(31, 41, 55, 0.12);
+  --fd-accent: #b45309;
+  --fd-shadow: 0 20px 45px rgba(120, 98, 69, 0.12);
+  --fd-font-sans: 'Avenir Next', 'Segoe UI', 'Helvetica Neue', sans-serif;
+  --fd-font-serif: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', serif;
+}
+
+html {
+  background:
+    radial-gradient(circle at top, rgba(236, 201, 136, 0.34), transparent 32%),
+    linear-gradient(180deg, #fbf6ee 0%, var(--fd-bg) 100%);
+}
+
+body {
+  min-height: 100vh;
+  color: var(--fd-ink);
+  font-family: var(--fd-font-sans);
+}
+
+@layer base {
+  * {
+    @apply border-transparent;
+  }
+
+  body {
+    @apply antialiased;
+  }
+
+  ::selection {
+    background: rgba(180, 83, 9, 0.18);
+  }
+}
+
+@layer components {
+  .fd-page-shell {
+    @apply mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 px-4 pb-10 pt-4 sm:px-6 sm:pt-6 lg:px-8;
+    padding-top: max(1rem, env(safe-area-inset-top));
+    padding-bottom: max(2.5rem, env(safe-area-inset-bottom));
+  }
+
+  .fd-hero {
+    @apply grid gap-5 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:items-stretch;
+  }
+
+  .fd-hero-copy {
+    @apply rounded-[2rem] border p-5 sm:p-7 lg:p-9;
+    border-color: var(--fd-line);
+    background: linear-gradient(180deg, rgba(255, 250, 242, 0.95), rgba(248, 240, 228, 0.9));
+    box-shadow: var(--fd-shadow);
+  }
+
+  .fd-kicker {
+    @apply text-sm font-semibold uppercase tracking-[0.25em];
+    color: var(--fd-accent);
+  }
+
+  .fd-title {
+    @apply mt-4 text-4xl leading-tight sm:text-5xl;
+    font-family: var(--fd-font-serif);
+  }
+
+  .fd-summary {
+    @apply mt-4 max-w-2xl text-base leading-7 sm:text-lg;
+    color: var(--fd-muted);
+  }
+
+  .fd-actions {
+    @apply mt-6 flex flex-col gap-3 sm:flex-row;
+  }
+
+  .fd-badges {
+    @apply mt-6 flex flex-wrap gap-2;
+  }
+
+  .fd-preview {
+    @apply rounded-[2rem] border p-3 sm:p-4;
+    border-color: var(--fd-line);
+    background: rgba(244, 238, 229, 0.76);
+    box-shadow: var(--fd-shadow);
+  }
+
+  .fd-preview-topbar {
+    @apply flex items-center gap-2 rounded-[1.35rem] px-3 py-3;
+    background: rgba(255, 249, 240, 0.9);
+  }
+
+  .fd-dot {
+    @apply h-2.5 w-2.5 rounded-full;
+  }
+
+  .fd-preview-title {
+    @apply ml-2 text-sm font-medium;
+    color: var(--fd-muted);
+  }
+
+  .fd-preview-grid {
+    @apply mt-3 grid gap-3 xl:grid-cols-[18rem_minmax(0,1fr)];
+  }
+
+  .fd-panel {
+    @apply rounded-[1.5rem] border p-4 sm:p-5;
+    border-color: var(--fd-line);
+    background: var(--fd-panel-strong);
+  }
+
+  .fd-panel-header {
+    @apply flex items-center justify-between gap-3 text-sm;
+    color: var(--fd-muted);
+  }
+
+  .fd-sidebar {
+    @apply flex flex-col gap-3;
+  }
+
+  .fd-nav-item {
+    @apply flex w-full items-center justify-between rounded-2xl border px-4 py-4 text-left text-sm transition sm:text-base;
+    border-color: transparent;
+    background: rgba(255, 247, 236, 0.72);
+  }
+
+  .fd-nav-item-active {
+    border-color: rgba(180, 83, 9, 0.18);
+    background: rgba(255, 241, 218, 0.95);
+  }
+
+  .fd-mobile-note {
+    @apply mt-auto rounded-2xl px-4 py-4 text-sm leading-6;
+    color: var(--fd-muted);
+    background: rgba(233, 224, 208, 0.56);
+  }
+
+  .fd-document {
+    @apply flex flex-col gap-4;
+  }
+
+  .fd-document-body {
+    @apply rounded-[1.4rem] px-1 py-2 sm:px-2;
+  }
+
+  .fd-document-body h2 {
+    @apply text-2xl;
+    font-family: var(--fd-font-serif);
+  }
+
+  .fd-document-body p {
+    @apply mt-3 max-w-3xl text-base leading-7;
+    color: var(--fd-muted);
+  }
+
+  .fd-feature-strip {
+    @apply grid gap-4 md:grid-cols-2 xl:grid-cols-3;
+  }
+
+  .fd-feature-card {
+    @apply rounded-[1.8rem] border p-5 sm:p-6;
+    border-color: var(--fd-line);
+    background: var(--fd-panel);
+    box-shadow: var(--fd-shadow);
+  }
+
+  .fd-feature-label {
+    @apply text-xs font-semibold uppercase tracking-[0.24em];
+    color: var(--fd-accent);
+  }
+
+  .fd-feature-card h2 {
+    @apply mt-3 text-2xl leading-snug;
+    font-family: var(--fd-font-serif);
+  }
+
+  .fd-feature-card p:last-child {
+    @apply mt-3 text-sm leading-6 sm:text-base;
+    color: var(--fd-muted);
+  }
+}
