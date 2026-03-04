@@ -7,6 +7,7 @@ import { issueAuthToken, getAuthCookieOptions } from '../../utils/auth'
 import { getDb } from '../../utils/db'
 import { hashPassword } from '../../utils/password'
 import { apiError, ok } from '../../utils/response'
+import { ensurePersonalWorkspace } from '../../utils/spaces'
 
 type RegisterBody = {
   username?: string
@@ -72,6 +73,8 @@ export default defineEventHandler(async (event) => {
   if (!createdUser) {
     return apiError(event, 500, 'REGISTER_FAILED', 'Unable to create user.')
   }
+
+  await ensurePersonalWorkspace(db, createdUser)
 
   const token = await issueAuthToken(event, {
     userId: createdUser.id,

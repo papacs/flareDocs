@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm'
 
-import { spaceMembers, spaces, type SpaceRole } from '../../../db/schema'
+import { spaceMembers, spaces, type SpaceRole, type SpaceVisibility } from '../../../db/schema'
 
 type DatabaseLike = ReturnType<typeof import('./db').getDb>
 
@@ -26,6 +26,87 @@ export class SpaceAccessError extends Error {
     this.statusCode = statusCode
     this.code = code
   }
+}
+
+export function buildPersonalWorkspaceSlug(username: string) {
+  return `personal-${username.trim().toLowerCase()}`
+}
+
+export function isPersonalWorkspace(space: { createdBy: number | null; slug: string; visibility: SpaceVisibility }, user?: AuthenticatedUser | null) {
+  if (!user) {
+    return false
+  }
+
+  return (
+    space.visibility === 'private' &&
+    space.createdBy === user.id &&
+    space.slug === buildPersonalWorkspaceSlug(user.username)
+  )
+}
+
+export async function ensurePersonalWorkspace(db: DatabaseLike, user: AuthenticatedUser) {
+  const slug = buildPersonalWorkspaceSlug(user.username)
+  const [existingSpace] = await db
+    .select({
+      id: spaces.id,
+      name: spaces.name,
+      slug: spaces.slug,
+      visibility: spaces.visibility,
+      createdBy: spaces.createdBy,
+      createdAt: spaces.createdAt
+    })
+    .from(spaces)
+    .where(eq(spaces.slug, slug))
+    .limit(1)
+
+  if (existingSpace) {
+    const [membership] = await db
+      .select({
+        role: spaceMembers.roleInSpace
+      })
+      .from(spaceMembers)
+      .where(and(eq(spaceMembers.spaceId, existingSpace.id), eq(spaceMembers.userId, user.id)))
+      .limit(1)
+
+    if (!membership) {
+      await db.insert(spaceMembers).values({
+        spaceId: existingSpace.id,
+        userId: user.id,
+        roleInSpace: 'admin'
+      })
+    }
+
+    return existingSpace
+  }
+
+  const [createdSpace] = await db
+    .insert(spaces)
+    .values({
+      name: `${user.username} 的个人工作区`,
+      slug,
+      visibility: 'private',
+      createdBy: user.id
+    })
+    .returning({
+      id: spaces.id,
+      name: spaces.name,
+      slug: spaces.slug,
+      visibility: spaces.visibility,
+      createdBy: spaces.createdBy,
+      createdAt: spaces.createdAt
+    })
+
+  if (!createdSpace) {
+    throw new SpaceAccessError(500, 'PERSONAL_SPACE_CREATE_FAILED', 'Unable to create personal workspace.')
+  }
+
+  await db.insert(spaceMembers).values({
+    spaceId: createdSpace.id,
+    userId: user.id,
+    roleInSpace: 'admin'
+  })
+
+  return createdSpace
 }
 
 export async function getSpaceContext(

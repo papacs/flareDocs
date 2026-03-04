@@ -1,18 +1,11 @@
 <script setup lang="ts">
-import MarkdownIt from 'markdown-it'
 import { computed } from 'vue'
+import { renderMarkdown } from '../utils/renderMarkdown'
 
 const props = defineProps<{
   value: string
 }>()
-
-const markdown = new MarkdownIt({
-  html: false,
-  linkify: true,
-  typographer: true
-})
-
-const renderedHtml = computed(() => markdown.render(props.value ?? ''))
+const renderedHtml = computed(() => renderMarkdown(props.value ?? ''))
 </script>
 
 <template>

@@ -4,6 +4,7 @@ import type { H3Event } from 'h3'
 import { users } from '../../../db/schema'
 import { getDb } from './db'
 import { hashPassword } from './password'
+import { ensurePersonalWorkspace } from './spaces'
 
 export async function ensureDefaultAdmin(event: H3Event) {
   const db = getDb(event)
@@ -41,6 +42,10 @@ export async function ensureDefaultAdmin(event: H3Event) {
     .from(users)
     .where(eq(users.username, 'admin'))
     .limit(1)
+
+  if (createdAdmin) {
+    await ensurePersonalWorkspace(db, createdAdmin)
+  }
 
   return createdAdmin ?? null
 }

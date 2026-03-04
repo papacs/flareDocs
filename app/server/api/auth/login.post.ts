@@ -8,6 +8,7 @@ import { getAuthCookieOptions, issueAuthToken } from '../../utils/auth'
 import { getDb } from '../../utils/db'
 import { verifyPassword } from '../../utils/password'
 import { apiError, ok } from '../../utils/response'
+import { ensurePersonalWorkspace } from '../../utils/spaces'
 
 type LoginBody = {
   username?: string
@@ -46,6 +47,12 @@ export default defineEventHandler(async (event) => {
   if (!passwordMatches) {
     return apiError(event, 401, 'INVALID_CREDENTIALS', 'Invalid username or password.')
   }
+
+  await ensurePersonalWorkspace(db, {
+    id: user.id,
+    username: user.username,
+    createdAt: user.createdAt
+  })
 
   const token = await issueAuthToken(event, {
     userId: user.id,

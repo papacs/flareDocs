@@ -2,7 +2,7 @@ import { getAuthenticatedUser } from '../../../utils/auth'
 import { getDb } from '../../../utils/db'
 import { getNumericRouteParam } from '../../../utils/request'
 import { apiError, ok } from '../../../utils/response'
-import { assertSpaceRole, SpaceAccessError } from '../../../utils/spaces'
+import { assertSpaceRole, isPersonalWorkspace, SpaceAccessError } from '../../../utils/spaces'
 
 export default defineEventHandler(async (event) => {
   const spaceId = getNumericRouteParam(event, 'spaceId')
@@ -20,6 +20,7 @@ export default defineEventHandler(async (event) => {
     return ok({
       space: {
         ...context.space,
+        isPersonal: isPersonalWorkspace(context.space, user),
         myRole: context.role
       }
     })

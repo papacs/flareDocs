@@ -8,7 +8,7 @@ import {
   text
 } from 'drizzle-orm/sqlite-core'
 
-export const spaceVisibilityValues = ['team', 'public'] as const
+export const spaceVisibilityValues = ['private', 'team', 'public'] as const
 export const spaceRoleValues = ['admin', 'editor', 'viewer'] as const
 export const documentTargetTypes = ['space', 'document', 'asset'] as const
 

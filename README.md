@@ -1,157 +1,210 @@
 # flareDocs
 
-flareDocs is a lightweight, serverless, Markdown-first knowledge base for small teams. The V0.1 target is a deployable Nuxt application running on Cloudflare Pages with D1 for structured data and R2 for file storage.
+flareDocs 是一个面向小团队的轻量级、无服务器、Markdown 优先知识库。V0.1 目标是交付一个可部署的 Nuxt 应用，运行在 Cloudflare Pages 上，并使用 D1 存储结构化数据、R2 存储上传文件。
 
-## Current Status
+## 当前状态
 
-This repository now has a working Nuxt 4 baseline aligned to the V0.1 plan.
+仓库已经完成 V0.1 范围内的主要实现，目前不是空项目，可以直接进行本地开发和联调。
 
-Note:
-- The original prompt specifies Nuxt 3
-- The current scaffold is on Nuxt 4.3.1 because the latest Nuxt UI setup path is built around Nuxt 4
-- If strict Nuxt 3 pinning is required, that should be resolved before deeper backend work
+当前已完成：
+- Nuxt + TypeScript + Tailwind CSS + Nuxt UI 基础脚手架
+- Drizzle ORM、D1 schema、初始 migration
+- 用户注册、登录、登出、`me` 接口与 JWT Cookie 会话
+- Space 管理、成员管理、基于角色的权限控制
+- 文档树、文档 CRUD、乐观锁版本控制
+- 工作区多级目录树、当前路径高亮、折叠记忆和“移动到...”操作
+- 工作区图标化目录面板、图标工具栏、全屏与多格式导出
+- 工作区紧凑目录树、标题就地重命名、删除确认和时间格式优化
+- 工作区悬浮工具条、图标化树操作和更轻的目录选中态
+- 工作区正文内部滚动、阅读进度条和更清晰的左右面板配色分层
+- 工作区外层滚动锁定、编辑器式双层正文布局，以及桌面端可点击跳转的阅读进度
+- 阅读进度改为自上而下的直觉映射，编辑态移除底部重复操作并让编辑器内容区铺满
+- 工作区顶部改成紧凑空间切换条，返回和审计改为图标按钮，当前用户改为小圆头像标识
+- 工作区顶部横条与主体重新对齐，返回入口改为主页图标，并进一步覆盖 ByteMD 默认固定高度以压掉编辑态留白
+- 主页入口悬浮文案改为“主页”，并继续收敛 ByteMD 编辑态的双滚动条与工具栏图标裁切
+- 空间可见性已扩展为 `私有 / 团队 / 公开`，并会为每个用户自动补一个默认“个人工作区”
+- 继续拉宽标题编辑输入框，隐藏 ByteMD 右侧模式图标以避免分栏残留，并让全屏阅读内容显式居中
+- 进一步在组件层强制关闭 ByteMD 分栏状态，并在样式层兜底隐藏残留预览面板，消除编辑态空白半屏与额外滚动条
+- 工作区文档加载失败时改为显式报错，并允许重复点击当前节点重新拉取，避免出现无提示空白态
+- 撤回对 ByteMD 内部 class 的直接劫持，改为进入编辑时重建编辑器实例，降低“点击编辑后卡死/空白”的风险
+- 恢复 ByteMD 右上角工具图标显示，并强制当前可见编辑/预览面板铺满宽度，继续压缩编辑态半屏空白与双滚动条问题
+- 保留 ByteMD 右上角常用图标，但禁用分栏切换按钮，并在 split 状态下强制隐藏右侧预览面板，避免有内容时出现半屏空白和第二根滚动条
+- 去掉 ByteMD 编辑区默认 `800px` 内容列限制，并收紧全屏头部间距，减少“有内容时只占左侧一列”和全屏顶部空间不足的问题
+- 隐藏 CodeMirror 的重复辅助滚动条与默认 scrollbar hack，只保留一层实际可滚动内容，减少编辑态双滚动条和拖拽错位问题
+- 恢复单根细滚动条作为编辑态主滚动通道，避免完全隐藏后无法拖拽定位
+- 撤回对 `CodeMirror-sizer` 的错误固定高度约束，并关闭横向滚动，只保留稳定的纵向主滚动，减少拖拽时滚动条跳动
+- 按要求撤回所有针对 CodeMirror 内部滚动与内部内容层的覆盖，只保留 ByteMD 外层壳样式，让编辑器滚动完全回到默认实现
+- ByteMD 编辑器与 Markdown 渲染页面
+- Markdown 数学公式渲染
+- R2 图片上传与同源访问路径
+- 审计日志写入、查询与页面
+- 本地初始化脚本与部署说明
+- 登录页视觉改版，以及仅在登录页显示的中英文切换
 
-Completed:
-- Requirement baseline in [prompt/init.md](/mnt/e/workspace/flareDocs/prompt/init.md)
-- Repository documentation baseline in [README.md](/mnt/e/workspace/flareDocs/README.md)
-- Collaboration guide in [AGENTS.md](/mnt/e/workspace/flareDocs/AGENTS.md)
-- Task and progress tracking in [TASKS.md](/mnt/e/workspace/flareDocs/TASKS.md)
-- Nuxt application scaffold with Tailwind CSS and Nuxt UI
-- Mobile-first landing shell and Cloudflare Pages-compatible Nitro build
-- Drizzle ORM schema, initial SQL migration, and D1 runtime helper
-- Auth APIs with JWT cookie sessions and same-origin write protection
-- Spaces APIs, membership management, and reusable RBAC helper
-- Documents tree APIs, CRUD, and optimistic locking
-- Responsive login, spaces dashboard, workspace shell, and Markdown editor/viewer UI
-- R2-backed image upload API, public asset route, and editor image insertion flow
-- Audit log writes with `waitUntil` fallback, admin audit API, and audit screen
-- Setup automation script and deployment notes
-- Follow-up fixes for Nuxt server route registration, locale switching, and bootstrap admin login
+当前需要注意：
+- 原始需求写的是 Nuxt 3，但当前脚手架实际使用的是 Nuxt 4.3.1
+- 这个工作区混用过 Linux 和 Windows 依赖，首次在你的机器上启动前建议重新执行一次 `pnpm install`
+- 真实 Cloudflare 的 D1 / R2 资源仍需你自己创建并替换占位值
 
-Remaining follow-up:
-- Run `pnpm lint` and `pnpm build` in a single-platform environment after reinstalling dependencies
-- Create real Cloudflare D1 and R2 resources and replace placeholders
+## 功能范围
 
-## Product Scope
+V0.1 范围内：
+- 小团队使用，规模大致 3 到 10 人
+- Space 内的树状 Markdown 文档
+- Space 级权限：`admin`、`editor`、`viewer`
+- 基于 HttpOnly Cookie 的 JWT 认证
+- 基于 `Origin` / `Referer` 的同源写请求保护
+- 基于 `version` 的乐观锁编辑冲突控制
+- 基于 R2 的附件上传
+- 关键操作审计日志
 
-V0.1 is intentionally constrained:
-
-- Small-team usage: roughly 3 to 10 people
-- Markdown documents organized in a tree within a space
-- Space-level access control: `admin`, `editor`, `viewer`
-- JWT auth with HttpOnly cookies
-- Basic CSRF protection via same-origin `Origin`/`Referer` checks
-- Optimistic locking for document edits via `version`
-- R2-backed asset upload
-- Audit logging for key actions
-
-Explicitly out of scope for V0.1:
-
-- Real-time collaboration
-- CRDT/WebSocket sync
+V0.1 明确不做：
+- 实时协作
+- CRDT / WebSocket 同步
 - Durable Objects
-- Full-text search infrastructure
-- Per-folder ACL inheritance or overrides
+- 全文检索基础设施
+- 目录级 ACL 继承或覆盖
 
-## Planned Stack
+## 技术栈
 
-- App: Nuxt 3 + Nitro + TypeScript
-- UI: TailwindCSS + Nuxt UI
-- Editor: ByteMD
-- Database: Cloudflare D1 (SQLite)
-- ORM: Drizzle ORM
-- Storage: Cloudflare R2
-- Deployment: Cloudflare Pages
-- Package manager: pnpm
-- Tooling: ESLint, Prettier, TypeScript
+- 应用框架：Nuxt 4 + Nitro + TypeScript
+- UI：Tailwind CSS + Nuxt UI
+- 编辑器：ByteMD
+- 数据库：Cloudflare D1（SQLite）
+- ORM：Drizzle ORM
+- 文件存储：Cloudflare R2
+- 部署：Cloudflare Pages
+- 包管理器：pnpm
+- 工具链：ESLint、Prettier、TypeScript、Wrangler
 
-## Delivery Principles
-
-- Build in small, reviewable steps
-- Keep V0.1 strict; avoid feature creep
-- Make local development and Cloudflare deployment both explicit
-- Treat security as a baseline requirement, not a later enhancement
-- Update docs and progress after every meaningful step
-
-## Roadmap
-
-The implementation order follows the requirement prompt:
-
-| Step | Scope | Status |
-| --- | --- | --- |
-| 0 | Documentation baseline | Done |
-| 1 | Initialize Nuxt baseline + TS + Tailwind + ESLint/Prettier + Nuxt UI | Done |
-| 2 | Integrate Drizzle + D1 schema + migrations | Done |
-| 3 | Users and auth APIs with JWT cookie and origin checks | Done |
-| 4 | Spaces and membership with reusable authorization helpers | Done |
-| 5 | Documents CRUD, tree API, optimistic locking | Done |
-| 6 | ByteMD editor and document reading/editing UI | Done |
-| 7 | R2 upload and editor asset insertion flow | Done |
-| 8 | Audit log write path and admin query UI | Done |
-| 9 | `scripts/setup.ts`, `.env.example`, deployment docs | Done |
-
-Detailed task notes live in [TASKS.md](/mnt/e/workspace/flareDocs/TASKS.md).
-
-## Target Repository Structure
-
-The codebase will be built toward this structure:
+## 项目结构
 
 ```text
 .
 ├── app/
-│   ├── pages/
+│   ├── assets/
 │   ├── components/
-│   ├── middleware/
 │   ├── composables/
-│   ├── server/
-│   │   ├── api/
-│   │   ├── middleware/
-│   │   ├── utils/
-│   │   └── services/
-│   └── assets/
+│   ├── pages/
+│   └── server/
 ├── db/
-│   ├── schema.ts
 │   ├── migrations/
-│   └── seed.ts
+│   └── schema.ts
 ├── scripts/
-│   ├── setup.ts
-│   └── dev-notes.md
-├── wrangler.toml
-├── package.json
-├── pnpm-lock.yaml
+│   ├── dev-notes.md
+│   └── setup.ts
+├── prompt/
 ├── README.md
-└── .env.example
+├── TASKS.md
+├── package.json
+├── nuxt.config.ts
+└── wrangler.toml.example
 ```
 
-## Local Development
+## 第一次本地启动
 
-Install dependencies:
+### 1. 准备运行环境
+
+建议使用以下版本：
+- Node.js：`22.x`
+- pnpm：`10.18.2`
+
+如果你的机器还没激活对应的 pnpm，可以先执行：
+
+```bash
+corepack enable
+corepack prepare pnpm@10.18.2 --activate
+```
+
+### 2. 安装依赖
 
 ```bash
 pnpm install
 ```
 
-Environment setup:
+如果这台机器之前切换过 Windows / Linux 环境，这一步不要跳过。
+
+### 3. 生成本地配置
+
+推荐直接运行项目初始化脚本：
+
+```bash
+pnpm project:setup
+```
+
+这一步会做两件事：
+- 生成本地 `.env`
+- 生成本地 `wrangler.toml`
+
+脚本位置见 [scripts/setup.ts](./scripts/setup.ts)。
+
+如果你想手动处理，也可以：
 
 ```bash
 cp .env.example .env
+cp wrangler.toml.example wrangler.toml
 ```
 
-Start the app:
+然后确认 `.env` 中至少有：
+
+```env
+NUXT_AUTH_SECRET=replace-with-a-long-random-secret
+```
+
+### 4. 初始化本地数据库
+
+执行本地 D1 migration：
+
+```bash
+pnpm db:migrate:local
+```
+
+migration 文件位于 [db/migrations/0000_initial.sql](./db/migrations/0000_initial.sql)。
+如果你是之前已经跑起来的本地库，这次还需要把新增 migration 一并执行到最新。
+
+### 5. 启动开发服务器
 
 ```bash
 pnpm dev
 ```
 
-Validate the current baseline:
+启动后按终端输出访问本地地址，通常是：
+
+```text
+http://localhost:3000
+```
+
+### 6. 首次登录
+
+系统在首次触发认证逻辑时会自动补一个默认管理员账号：
+- 用户名：`admin`
+- 密码：`admin`
+
+相关逻辑见 [app/server/utils/bootstrap.ts](./app/server/utils/bootstrap.ts)。
+
+## 最短启动命令
 
 ```bash
+corepack enable
+corepack prepare pnpm@10.18.2 --activate
+pnpm install
+pnpm project:setup
+pnpm db:migrate:local
+pnpm dev
+```
+
+## 本地开发说明
+
+### 常用命令
+
+```bash
+pnpm dev
 pnpm lint
 pnpm typecheck
 pnpm build
 ```
 
-Database workflow:
+### 数据库相关命令
 
 ```bash
 pnpm db:generate
@@ -159,216 +212,118 @@ pnpm db:migrate:local
 pnpm db:migrate:remote
 ```
 
-Notes:
-- `db:generate` uses [drizzle.config.ts](/mnt/e/workspace/flareDocs/drizzle.config.ts)
-- `db:migrate:local` uses [wrangler.toml](/mnt/e/workspace/flareDocs/wrangler.toml) and expects a local D1 binding named `DB`
-- `db:migrate:remote` applies migrations to the real Cloudflare D1 database with `--remote`
-- Replace the placeholder `database_id` in [wrangler.toml](/mnt/e/workspace/flareDocs/wrangler.toml) before real Cloudflare use
-- Use [wrangler.toml.example](/mnt/e/workspace/flareDocs/wrangler.toml.example) as the tracked template and keep real resource ids only in your local ignored `wrangler.toml`
-- Set `NUXT_AUTH_SECRET` before using auth endpoints
+说明：
+- `db:generate` 使用 [drizzle.config.ts](./drizzle.config.ts)
+- `db:migrate:local` 使用本地 `wrangler.toml`，并依赖 D1 绑定名 `DB`
+- `db:migrate:remote` 会通过 `--remote` 把 migration 应用到真实 Cloudflare D1
+- 跟仓库提交相关的模板文件是 [wrangler.toml.example](./wrangler.toml.example)
+- 实际使用的 `wrangler.toml` 已被 `.gitignore` 忽略，只保留在本地
 
-## Current Frontend Baseline
+## 常见问题
 
-Step 6 connects the existing backend to the first usable UI:
+### 1. `pnpm` 无法运行或报权限错误
 
-- [app/pages/index.vue](/mnt/e/workspace/flareDocs/app/pages/index.vue) now works as a spaces dashboard with session state and create-space flow
-- [app/pages/login.vue](/mnt/e/workspace/flareDocs/app/pages/login.vue) adds a touch-friendly login/register screen
-- [app/pages/spaces/[spaceId].vue](/mnt/e/workspace/flareDocs/app/pages/spaces/[spaceId].vue) adds the main workspace with a document list, read mode, and edit mode
-- [MarkdownEditor.client.vue](/mnt/e/workspace/flareDocs/app/components/MarkdownEditor.client.vue) integrates ByteMD on the client
-- [MarkdownViewer.vue](/mnt/e/workspace/flareDocs/app/components/MarkdownViewer.vue) renders Markdown with `markdown-it` and HTML disabled
+优先检查本机 `corepack` 和 `pnpm` 是否正确安装。建议重新执行：
 
-Mobile layout constraints remain explicit:
+```bash
+corepack enable
+corepack prepare pnpm@10.18.2 --activate
+```
 
-- Mobile-first stacking comes before desktop sidebar behavior
-- Safe viewport padding is included for phone browsers
-- Forms and document actions stay thumb-friendly on narrow screens
-- The workspace keeps the tree and editor readable instead of forcing a desktop-only split layout
-- Nuxt UI is enabled, but its automatic font module is disabled to keep builds offline-safe
-- Nitro is configured for `cloudflare-pages`
+### 2. 提示 `Missing runtime config authSecret`
 
-Validation status for the latest UI step:
+说明 `.env` 里没有 `NUXT_AUTH_SECRET`，重新执行：
 
-- `pnpm typecheck` passed
-- `pnpm lint` currently loads very slowly through the generated Nuxt ESLint config in this sandbox
-- `pnpm build` reaches Nuxt/Nitro production build startup but did not finish before the sandbox timeout window
+```bash
+pnpm project:setup
+```
 
-## Upload Baseline
+或者手动补上该环境变量。
 
-Step 7 adds the first real asset flow:
+### 3. 提示 `D1 binding \`DB\` is not configured`
 
-- [upload.post.ts](/mnt/e/workspace/flareDocs/app/server/api/spaces/[spaceId]/upload.post.ts) uploads images to the R2 `R2_ASSETS` bucket
-- [storage.ts](/mnt/e/workspace/flareDocs/app/server/utils/storage.ts) centralizes allowed image types, size limits, bucket access, and public asset URL building
-- [uploads/[...key].get.ts](/mnt/e/workspace/flareDocs/app/server/routes/uploads/[...key].get.ts) serves uploaded files back through the app origin
-- [MarkdownEditor.client.vue](/mnt/e/workspace/flareDocs/app/components/MarkdownEditor.client.vue) now sends image uploads directly from the editor toolbar or drag-and-drop flow
-- [wrangler.toml](/mnt/e/workspace/flareDocs/wrangler.toml) now includes an `R2_ASSETS` R2 binding placeholder
+说明本地 `wrangler.toml` 没准备好，或者 migration 还没执行。按下面顺序检查：
+- 是否已生成本地 `wrangler.toml`
+- 是否已执行 `pnpm db:migrate:local`
+- `wrangler.toml` 中是否存在 `DB` 这个 D1 binding
 
-Current upload rules:
+### 4. 上传接口提示 `R2 binding \`R2_ASSETS\` is not configured`
 
-- Only `image/png`, `image/jpeg`, `image/gif`, `image/webp`, and `image/avif`
-- Max size is 5 MB
-- Upload requires space-level `editor` access
-- Returned Markdown URLs stay on the same app origin for simpler local and Cloudflare deployment
+说明你当前运行环境没有接好 R2。页面基础功能可以先开发，但上传能力需要在 `wrangler.toml` 中配置 `R2_ASSETS`。
 
-## Audit Baseline
+## Cloudflare 部署准备
 
-Step 8 adds the operational trail required by the prompt:
+如果你要接入真实 Cloudflare 资源，基本顺序如下：
 
-- [audit.ts](/mnt/e/workspace/flareDocs/app/server/utils/audit.ts) centralizes log creation and `waitUntil` scheduling
-- [audit-logs.get.ts](/mnt/e/workspace/flareDocs/app/server/api/spaces/[spaceId]/audit-logs.get.ts) adds the admin-only query endpoint
-- [audit.vue](/mnt/e/workspace/flareDocs/app/pages/spaces/[spaceId]/audit.vue) adds a responsive audit screen with basic filters and paging
-- Successful `LOGIN`, `LOGOUT`, `CREATE_SPACE`, membership changes, document mutations, and `UPLOAD_ASSET` now enqueue audit entries
+1. 创建 D1 数据库
 
-Current audit rules:
+```bash
+pnpm wrangler d1 create flaredocs-db
+```
 
-- Audit writes avoid storing full Markdown bodies
-- Query access is limited to space `admin`
-- Filters include `action`, `userId`, `dateFrom`, `dateTo`, `page`, and `pageSize`
+2. 创建 R2 Bucket
 
-## Setup Baseline
+```bash
+pnpm wrangler r2 bucket create <your-bucket>
+```
 
-Step 9 adds the bootstrap path for new environments:
+3. 用真实资源信息更新本地 `wrangler.toml`
+- `database_id`
+- `bucket_name`
+- `preview_bucket_name`
 
-- [scripts/setup.ts](/mnt/e/workspace/flareDocs/scripts/setup.ts) prepares `.env`, generates an auth secret when needed, and can replace `wrangler.toml` placeholders
-- [wrangler.toml.example](/mnt/e/workspace/flareDocs/wrangler.toml.example) is the tracked open-source template; the real `wrangler.toml` should stay local and ignored
-- [scripts/dev-notes.md](/mnt/e/workspace/flareDocs/scripts/dev-notes.md) captures the shortest local and Cloudflare paths
-- [.env.example](/mnt/e/workspace/flareDocs/.env.example) now includes the runtime secret and optional setup helper inputs
-- [package.json](/mnt/e/workspace/flareDocs/package.json) includes `pnpm project:setup`
+也可以直接重新运行：
 
-Validation for the setup path:
+```bash
+pnpm project:setup -- --d1-database-id=<your-d1-id> --r2-bucket=<your-r2-bucket> --r2-preview-bucket=<your-preview-bucket>
+```
 
-- `node --experimental-strip-types scripts/setup.ts --dry-run` passed
+4. 应用远程 migration
 
-## Follow-Up Fixes
+```bash
+pnpm db:migrate:remote
+```
 
-The repository also includes a post-bootstrap polish pass:
+## 关键实现说明
 
-- [nuxt.config.ts](/mnt/e/workspace/flareDocs/nuxt.config.ts) now points `serverDir` to [app/server](/mnt/e/workspace/flareDocs/app/server) so Nitro can register the API routes that live there
-- [bootstrap.ts](/mnt/e/workspace/flareDocs/app/server/utils/bootstrap.ts) seeds a default `admin / admin` account when the auth layer is first touched
-- [useAppLocale.ts](/mnt/e/workspace/flareDocs/app/composables/useAppLocale.ts) and [LocaleSwitch.vue](/mnt/e/workspace/flareDocs/app/components/LocaleSwitch.vue) add a lightweight `zh-CN` / `en` switch with Chinese as the default locale
-- Login, dashboard, workspace, and audit screens now read UI text from the locale store
-- [MarkdownEditor.client.vue](/mnt/e/workspace/flareDocs/app/components/MarkdownEditor.client.vue) now uses tabbed write/preview mode instead of the earlier split layout
-- [main.css](/mnt/e/workspace/flareDocs/app/assets/css/main.css) now includes document-style Markdown rendering and editor skinning
-- [package.json](/mnt/e/workspace/flareDocs/package.json) now runs remote D1 migrations with `--remote`
+### 认证与安全
 
-Current caveat:
+- 认证使用 JWT + HttpOnly Cookie
+- 写请求使用同源校验，避免基础 CSRF 风险
+- 认证相关核心逻辑在 [app/server/utils/auth.ts](./app/server/utils/auth.ts)
+- 同源保护中间件在 [app/server/middleware/csrf.ts](./app/server/middleware/csrf.ts)
 
-- This workspace has been used across Linux and Windows environments, so Nuxt type generation now requires a fresh `pnpm install` on the active platform before local validation commands are reliable again
+### 数据库接入
 
-## Database Baseline
+- D1 运行时访问封装在 [app/server/utils/db.ts](./app/server/utils/db.ts)
+- Drizzle schema 位于 [db/schema.ts](./db/schema.ts)
+- 初始 migration 位于 [db/migrations/0000_initial.sql](./db/migrations/0000_initial.sql)
 
-Step 2 added the first real backend foundation:
+### 上传能力
 
-- Schema source in [db/schema.ts](/mnt/e/workspace/flareDocs/db/schema.ts)
-- Initial SQL migration in [db/migrations/0000_initial.sql](/mnt/e/workspace/flareDocs/db/migrations/0000_initial.sql)
-- Drizzle config in [drizzle.config.ts](/mnt/e/workspace/flareDocs/drizzle.config.ts)
-- D1 access helper in [db.ts](/mnt/e/workspace/flareDocs/app/server/utils/db.ts)
-- Minimal database health route in [db.get.ts](/mnt/e/workspace/flareDocs/app/server/api/health/db.get.ts)
+- 上传接口位于 [app/server/api/spaces/[spaceId]/upload.post.ts](./app/server/api/spaces/[spaceId]/upload.post.ts)
+- 上传规则封装在 [app/server/utils/storage.ts](./app/server/utils/storage.ts)
+- 仅允许图片类型，默认限制 5 MB
 
-The migration covers:
+### 审计日志
 
-- `users`
-- `spaces`
-- `space_members`
-- `documents`
-- `audit_logs`
+- 审计写入封装在 [app/server/utils/audit.ts](./app/server/utils/audit.ts)
+- 查询接口位于 [app/server/api/spaces/[spaceId]/audit-logs.get.ts](./app/server/api/spaces/[spaceId]/audit-logs.get.ts)
+- 只有 Space `admin` 可查看审计日志
 
-The demo route is `GET /api/health/db`. It uses Drizzle against the D1 `DB` binding and returns a simple JSON payload with the current `users` row count.
+### 首页创建空间
 
-## Auth Baseline
+- 首页创建空间表单会先在前端校验名称长度，要求 `2-64` 个字符
+- 名称不合法时，创建按钮会保持禁用，避免直接打到 `POST /api/spaces` 产生 `422`
+- 如果接口仍然返回失败，页面会优先展示服务端返回的具体错误信息
+- 首页创建表单已调整为单行输入布局，空间名称与可见性选择并排展示
+- 首页卡片与空间列表样式已重新收紧，创建入口、统计摘要和空间卡片层次更清晰
 
-Step 3 adds the first real application security layer:
+## 任务与进度
 
-- Password hashing in [password.ts](/mnt/e/workspace/flareDocs/app/server/utils/password.ts)
-- JWT issue/verify helpers and cookie handling in [auth.ts](/mnt/e/workspace/flareDocs/app/server/utils/auth.ts)
-- Standard API response helpers in [response.ts](/mnt/e/workspace/flareDocs/app/server/utils/response.ts)
-- Same-origin write middleware in [csrf.ts](/mnt/e/workspace/flareDocs/app/server/middleware/csrf.ts)
-- Auth endpoints under [app/server/api/auth](/mnt/e/workspace/flareDocs/app/server/api/auth)
+当前执行记录见 [TASKS.md](./TASKS.md)。
 
-Available auth routes:
-
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `POST /api/auth/logout`
-- `GET /api/auth/me`
-
-Request notes:
-
-- All write API requests must be same-origin
-- Current write APIs require `Content-Type: application/json`
-- Session cookies are `HttpOnly` and `SameSite=Strict`
-- `Secure` is enabled automatically on HTTPS requests; local HTTP development falls back to non-secure cookies so login remains testable
-
-## Space Baseline
-
-Step 4 adds the first real multi-user authorization layer:
-
-- Space access helper in [spaces.ts](/mnt/e/workspace/flareDocs/app/server/utils/spaces.ts)
-- Route param parsing helper in [request.ts](/mnt/e/workspace/flareDocs/app/server/utils/request.ts)
-- Space routes under [app/server/api/spaces](/mnt/e/workspace/flareDocs/app/server/api/spaces)
-
-Available space routes:
-
-- `GET /api/spaces`
-- `POST /api/spaces`
-- `GET /api/spaces/:spaceId`
-- `POST /api/spaces/:spaceId/members`
-- `PATCH /api/spaces/:spaceId/members/:userId`
-- `DELETE /api/spaces/:spaceId/members/:userId`
-
-Current authorization rules:
-
-- Public spaces allow guest read access
-- Team spaces require login plus membership even for read
-- `admin` can manage membership
-- `editor` and `admin` remain the intended future write roles for documents
-- Role checks are centralized through `assertSpaceRole(spaceId, user, requiredRole)`
-
-## Document Baseline
-
-Step 5 adds the main document API surface:
-
-- Document helpers in [documents.ts](/mnt/e/workspace/flareDocs/app/server/utils/documents.ts)
-- Tree endpoint in [tree.get.ts](/mnt/e/workspace/flareDocs/app/server/api/spaces/[spaceId]/tree.get.ts)
-- Document create endpoint in [index.post.ts](/mnt/e/workspace/flareDocs/app/server/api/spaces/[spaceId]/docs/index.post.ts)
-- Document read/update/delete endpoints under [app/server/api/spaces/[spaceId]/docs/[docId]](/mnt/e/workspace/flareDocs/app/server/api/spaces/[spaceId]/docs/[docId])
-
-Available document routes:
-
-- `GET /api/spaces/:spaceId/tree`
-- `POST /api/spaces/:spaceId/docs`
-- `GET /api/spaces/:spaceId/docs/:docId`
-- `PUT /api/spaces/:spaceId/docs/:docId`
-- `DELETE /api/spaces/:spaceId/docs/:docId`
-
-Current document rules:
-
-- Read requires space-level `viewer` access
-- Create, update, and delete require space-level `editor` access
-- Parent documents must exist in the same space and must be folders
-- Document moves reject cycles
-- Updates require `version`; stale writes return `409` with the current `{ version, updatedAt }`
-
-## What Will Make This Project Hard
-
-The product scope is manageable, but the engineering integration is not trivial:
-
-- Nuxt 3 plus Nitro on Cloudflare Pages requires careful runtime choices
-- D1 and R2 bindings affect local development and deployment setup
-- Cookie auth, CSRF checks, and RBAC must be correct from the start
-- Markdown rendering must avoid XSS
-- Document tree operations and optimistic locking introduce backend edge cases
-
-This is a moderate project for an experienced full-stack engineer, and a moderate-to-hard one if Cloudflare serverless tooling is new.
-
-## Working Agreement
-
-Until the app scaffold exists, this repository should treat documentation as the source of truth.
-
-- Use [prompt/init.md](/mnt/e/workspace/flareDocs/prompt/init.md) as the implementation contract
-- Use [AGENTS.md](/mnt/e/workspace/flareDocs/AGENTS.md) for execution rules
-- Use [TASKS.md](/mnt/e/workspace/flareDocs/TASKS.md) for status updates
-- Keep changes narrowly scoped to one theme at a time
-
-## Next Step
-
-The main V0.1 implementation path from Step 0 through Step 9 is now in place. The next practical step is real Cloudflare resource provisioning plus end-to-end verification outside the current sandbox timeout window.
+如果你要继续推进功能或补部署细节，建议先看：
+- [prompt/init.md](./prompt/init.md)
+- [TASKS.md](./TASKS.md)
+- [scripts/dev-notes.md](./scripts/dev-notes.md)

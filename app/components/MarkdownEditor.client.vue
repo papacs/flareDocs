@@ -77,6 +77,7 @@ async function uploadImages(files: File[]) {
   <div class="fd-editor-shell">
     <component
       :is="ByteMdEditor"
+      class="fd-editor-core"
       :value="props.modelValue"
       :plugins="plugins"
       :placeholder="props.placeholder ?? 'Write in Markdown...'"

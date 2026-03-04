@@ -61,38 +61,31 @@ async function submit() {
 </script>
 
 <template>
-  <main class="mx-auto flex min-h-screen w-full max-w-5xl items-center px-4 py-6 sm:px-6 lg:px-8">
-    <section class="grid w-full gap-5 lg:grid-cols-[minmax(0,1fr)_26rem]">
-      <div
-        class="rounded-[2rem] border border-[rgba(31,41,55,0.12)] bg-[linear-gradient(180deg,rgba(255,250,242,0.95),rgba(248,240,228,0.9))] p-6 shadow-[0_20px_45px_rgba(120,98,69,0.12)] sm:p-8"
-      >
-        <p class="text-sm font-semibold uppercase tracking-[0.24em] text-amber-700">{{ t('login.kicker') }}</p>
-        <h1
-          class="mt-4 font-['Iowan_Old_Style','Palatino_Linotype','Book_Antiqua',serif] text-4xl leading-tight text-slate-800 sm:text-5xl"
-        >
-          {{ t('login.title') }}
-        </h1>
-        <p class="mt-4 max-w-2xl text-base leading-7 text-slate-500 sm:text-lg">
-          {{ t('login.summary') }}
-        </p>
+  <main class="fd-auth-page">
+    <div class="fd-auth-topbar">
+      <LocaleSwitch />
+    </div>
 
-        <div class="mt-8 grid gap-4 sm:grid-cols-2">
-          <article class="rounded-2xl bg-[rgba(255,247,236,0.88)] p-4">
-            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">{{ t('login.mode') }}</p>
-            <p class="mt-2 text-lg font-semibold text-slate-800">
-              {{ mode === 'login' ? t('login.modeReturning') : t('login.modeFirst') }}
-            </p>
+    <section class="fd-auth-shell">
+      <div class="fd-auth-copy">
+        <p class="fd-kicker">{{ t('login.kicker') }}</p>
+        <h1 class="fd-auth-title">{{ t('login.title') }}</h1>
+        <p class="fd-auth-summary">{{ t('login.summary') }}</p>
+
+        <div class="fd-auth-feature-grid">
+          <article class="fd-auth-feature">
+            <p class="fd-auth-feature-label">{{ t('login.featureSecurityLabel') }}</p>
+            <p class="fd-auth-feature-value">{{ t('login.featureSecurityValue') }}</p>
           </article>
-
-          <article class="rounded-2xl bg-[rgba(255,247,236,0.88)] p-4">
-            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">{{ t('login.route') }}</p>
-            <p class="mt-2 text-lg font-semibold text-slate-800">/api/auth/{{ mode }}</p>
+          <article class="fd-auth-feature">
+            <p class="fd-auth-feature-label">{{ t('login.featureDevicesLabel') }}</p>
+            <p class="fd-auth-feature-value">{{ t('login.featureDevicesValue') }}</p>
           </article>
         </div>
-        <p class="mt-6 text-sm font-medium text-amber-700">{{ t('login.bootstrapAdmin') }}</p>
       </div>
 
-      <div class="rounded-[2rem] border border-[rgba(31,41,55,0.12)] bg-[rgba(255,251,245,0.9)] p-5 shadow-[0_20px_45px_rgba(120,98,69,0.12)] sm:p-6">
+      <div class="fd-auth-card">
+        <div class="fd-auth-glow" aria-hidden="true" />
         <div class="flex gap-2 rounded-2xl bg-[rgba(244,238,229,0.8)] p-2">
           <button
             type="button"
@@ -120,25 +113,43 @@ async function submit() {
           </button>
         </div>
 
-        <form class="mt-5 space-y-4" @submit.prevent="submit">
-          <UInput
-            v-model="form.username"
-            size="xl"
-            autocomplete="username"
-            :placeholder="t('login.username')"
-          />
-          <UInput
-            v-model="form.password"
-            size="xl"
-            type="password"
-            autocomplete="current-password"
-            :placeholder="t('login.password')"
-          />
+        <div class="mt-6">
+          <p class="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--fd-accent)]">
+            {{ mode === 'login' ? t('login.tabLogin') : t('login.tabRegister') }}
+          </p>
+          <h2 class="mt-3 text-2xl text-slate-900" style="font-family: var(--fd-font-serif)">
+            {{ mode === 'login' ? t('login.panelTitleLogin') : t('login.panelTitleRegister') }}
+          </h2>
+          <p class="mt-2 text-sm leading-6 text-slate-500">
+            {{ mode === 'login' ? t('login.panelSummaryLogin') : t('login.panelSummaryRegister') }}
+          </p>
+        </div>
+
+        <form class="fd-auth-form" @submit.prevent="submit">
+          <div class="fd-auth-field">
+            <UInput
+              v-model="form.username"
+              size="xl"
+              autocomplete="username"
+              :placeholder="t('login.username')"
+              class="fd-auth-input"
+            />
+          </div>
+          <div class="fd-auth-field">
+            <UInput
+              v-model="form.password"
+              size="xl"
+              type="password"
+              autocomplete="current-password"
+              :placeholder="t('login.password')"
+              class="fd-auth-input"
+            />
+          </div>
           <p v-if="errorMessage" class="text-sm text-rose-600">{{ errorMessage }}</p>
-          <UButton type="submit" block size="xl" color="neutral" :loading="pending">
+          <UButton type="submit" block size="xl" color="neutral" class="fd-auth-submit" :loading="pending">
             {{ mode === 'login' ? t('login.submitLogin') : t('login.submitRegister') }}
           </UButton>
-          <UButton block size="xl" color="neutral" variant="ghost" to="/">
+          <UButton block size="xl" color="neutral" variant="ghost" class="fd-auth-back" to="/">
             {{ t('login.back') }}
           </UButton>
         </form>

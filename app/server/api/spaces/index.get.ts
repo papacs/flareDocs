@@ -4,6 +4,7 @@ import { spaceMembers, spaces } from '../../../../db/schema'
 import { getAuthenticatedUser } from '../../utils/auth'
 import { getDb } from '../../utils/db'
 import { ok } from '../../utils/response'
+import { ensurePersonalWorkspace, isPersonalWorkspace } from '../../utils/spaces'
 
 export default defineEventHandler(async (event) => {
   const db = getDb(event)
@@ -25,10 +26,13 @@ export default defineEventHandler(async (event) => {
     return ok({
       spaces: publicSpaces.map((space) => ({
         ...space,
+        isPersonal: false,
         myRole: null
       }))
     })
   }
+
+  await ensurePersonalWorkspace(db, user)
 
   const joinedSpaces = await db
     .select({
@@ -36,6 +40,7 @@ export default defineEventHandler(async (event) => {
       name: spaces.name,
       slug: spaces.slug,
       visibility: spaces.visibility,
+      createdBy: spaces.createdBy,
       createdAt: spaces.createdAt,
       myRole: spaceMembers.roleInSpace
     })
@@ -50,8 +55,9 @@ export default defineEventHandler(async (event) => {
       id: number
       name: string
       slug: string
-      visibility: 'team' | 'public'
+      visibility: 'private' | 'team' | 'public'
       createdAt: number
+      isPersonal: boolean
       myRole: 'admin' | 'editor' | 'viewer' | null
     }
   >()
@@ -59,12 +65,16 @@ export default defineEventHandler(async (event) => {
   for (const space of publicSpaces) {
     dedupedSpaces.set(space.id, {
       ...space,
+      isPersonal: false,
       myRole: null
     })
   }
 
   for (const space of joinedSpaces) {
-    dedupedSpaces.set(space.id, space)
+    dedupedSpaces.set(space.id, {
+      ...space,
+      isPersonal: isPersonalWorkspace(space, user)
+    })
   }
 
   return ok({

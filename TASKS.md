@@ -133,7 +133,7 @@ Date: 2026-03-04
 Date: 2026-03-04
 
 - Expanded [.env.example](/mnt/e/workspace/flareDocs/.env.example) with setup helper placeholders
-- Added `pnpm setup` in [package.json](/mnt/e/workspace/flareDocs/package.json)
+- Added `pnpm project:setup` in [package.json](/mnt/f/newworkspace/flareDocs/package.json)
 - Added bootstrap helper in [setup.ts](/mnt/e/workspace/flareDocs/scripts/setup.ts)
 - Added deployment notes in [dev-notes.md](/mnt/e/workspace/flareDocs/scripts/dev-notes.md)
 - Verified `node --experimental-strip-types scripts/setup.ts --dry-run`
@@ -142,9 +142,34 @@ Date: 2026-03-04
 
 Date: 2026-03-04
 
+- Rewrote [README.md](/mnt/f/newworkspace/flareDocs/README.md) in Chinese and added a first-run local startup guide
+- Refined [login.vue](/mnt/f/newworkspace/flareDocs/app/pages/login.vue) to remove exposed mode and route hints, improve the visual layout, and keep [LocaleSwitch.vue](/mnt/e/workspace/flareDocs/app/components/LocaleSwitch.vue) on the login page only
+- Updated [spaces/[spaceId].vue](/mnt/f/newworkspace/flareDocs/app/pages/spaces/[spaceId].vue) to render a nested document tree, clarify the current role badge, and add a move action for documents and folders
+- Added knowledge-base style tree context in [spaces/[spaceId].vue](/mnt/f/newworkspace/flareDocs/app/pages/spaces/[spaceId].vue) with path highlighting, fold-state persistence, and math rendering support in [MarkdownViewer.vue](/mnt/f/newworkspace/flareDocs/app/components/MarkdownViewer.vue)
+- Added [WorkspaceIcon.vue](/mnt/f/newworkspace/flareDocs/app/components/WorkspaceIcon.vue), icon-based workspace actions, fullscreen viewing, and icon-only export actions for Markdown, PDF, and Word
+- Tightened the workspace layout in [spaces/[spaceId].vue](/mnt/f/newworkspace/flareDocs/app/pages/spaces/[spaceId].vue) with compact tree rows, right-side breadcrumbs, inline rename support, delete confirmation, and formatted timestamps
+- Refined the workspace chrome in [spaces/[spaceId].vue](/mnt/f/newworkspace/flareDocs/app/pages/spaces/[spaceId].vue) with single-row floating actions, icon-only tree controls, and lighter selection styling
+- Added internal reader scrolling and progress tracking in [spaces/[spaceId].vue](/mnt/f/newworkspace/flareDocs/app/pages/spaces/[spaceId].vue), and rebalanced workspace panel colors in [main.css](/mnt/f/newworkspace/flareDocs/app/assets/css/main.css)
+- Locked workspace overflow to internal panes in [spaces/[spaceId].vue](/mnt/f/newworkspace/flareDocs/app/pages/spaces/[spaceId].vue), switched the right panel to an editor-style two-layer layout, and made reading progress click-to-jump on fine-pointer devices only
+- Flipped reading progress to a top-down mapping in [spaces/[spaceId].vue](/mnt/f/newworkspace/flareDocs/app/pages/spaces/[spaceId].vue), removed duplicate edit actions below the editor, and expanded the ByteMD editing area in [main.css](/mnt/f/newworkspace/flareDocs/app/assets/css/main.css)
+- Reworked the workspace top bar in [spaces/[spaceId].vue](/mnt/f/newworkspace/flareDocs/app/pages/spaces/[spaceId].vue) into a compact space switcher with icon-only back/audit actions and a small user avatar marker, and tightened ByteMD height handling in [MarkdownEditor.client.vue](/mnt/f/newworkspace/flareDocs/app/components/MarkdownEditor.client.vue) and [main.css](/mnt/f/newworkspace/flareDocs/app/assets/css/main.css)
+- Aligned the compact workspace top bar to the main layout in [spaces/[spaceId].vue](/mnt/f/newworkspace/flareDocs/app/pages/spaces/[spaceId].vue), swapped the return action to a home icon in [WorkspaceIcon.vue](/mnt/f/newworkspace/flareDocs/app/components/WorkspaceIcon.vue), and overrode ByteMD's built-in `300px` editor height in [main.css](/mnt/f/newworkspace/flareDocs/app/assets/css/main.css)
+- Updated the home button tooltip in [useAppLocale.ts](/mnt/f/newworkspace/flareDocs/app/composables/useAppLocale.ts) and [spaces/[spaceId].vue](/mnt/f/newworkspace/flareDocs/app/pages/spaces/[spaceId].vue), then tightened ByteMD toolbar overflow and non-split editor width rules in [main.css](/mnt/f/newworkspace/flareDocs/app/assets/css/main.css) to reduce dual scrollbars and clipped toolbar icons
+- Widened the rename input in [spaces/[spaceId].vue](/mnt/f/newworkspace/flareDocs/app/pages/spaces/[spaceId].vue), hid ByteMD's right-side mode icons and forced active panes to full width in [main.css](/mnt/f/newworkspace/flareDocs/app/assets/css/main.css), and centered fullscreen reader content via [fd-reader-scroll](/mnt/f/newworkspace/flareDocs/app/assets/css/main.css)
+- Added a ByteMD layout normalizer in [MarkdownEditor.client.vue](/mnt/f/newworkspace/flareDocs/app/components/MarkdownEditor.client.vue) to strip persistent split mode, and kept a CSS fallback in [main.css](/mnt/f/newworkspace/flareDocs/app/assets/css/main.css) to hide any residual split preview pane
+- Hardened document loading in [spaces/[spaceId].vue](/mnt/f/newworkspace/flareDocs/app/pages/spaces/[spaceId].vue) so load failures surface in `workspaceError`, clear the stale panel state, and allow re-clicking the current tree node to retry the fetch
+- Replaced the risky ByteMD class-manipulation approach with explicit editor remounting in [spaces/[spaceId].vue](/mnt/f/newworkspace/flareDocs/app/pages/spaces/[spaceId].vue) and simplified [MarkdownEditor.client.vue](/mnt/f/newworkspace/flareDocs/app/components/MarkdownEditor.client.vue) so clicking edit resets the editor into a clean tab-mode instance
+- Restored ByteMD's top-right toolbar icons in [main.css](/mnt/f/newworkspace/flareDocs/app/assets/css/main.css), forced the active editor/preview pane to 100% width regardless of internal split state, and tightened CodeMirror scroll ownership to reduce the remaining double-scroll behavior
+- Disabled ByteMD's split-toggle icon via [main.css](/mnt/f/newworkspace/flareDocs/app/assets/css/main.css) while keeping the other top-right tools visible, and forced any residual split state to hide the preview pane so populated documents no longer collapse into a half-empty editor
+- Removed ByteMD's default `max-width: 800px` editor column and line padding constraints in [main.css](/mnt/f/newworkspace/flareDocs/app/assets/css/main.css), and reduced fullscreen document header spacing so long documents have more usable vertical room without the content appearing compressed into the left side
+- Hid CodeMirror's auxiliary scrollbars and reset its default margin/padding scrollbar hack in [main.css](/mnt/f/newworkspace/flareDocs/app/assets/css/main.css) so the editor keeps one effective scroll layer instead of showing multiple unusable bars
+- Restored a single thin draggable scrollbar on [CodeMirror-scroll](/mnt/f/newworkspace/flareDocs/app/assets/css/main.css) so the editor remains easy to navigate after removing the duplicate scrollbar layers
+- Removed the incorrect fixed-height override on [CodeMirror-sizer](/mnt/f/newworkspace/flareDocs/app/assets/css/main.css), disabled horizontal editor scrolling, and kept only a contained vertical scroll channel to reduce scrollbar jumping while dragging
+- Reverted the experimental CodeMirror internal scroll overrides in [main.css](/mnt/f/newworkspace/flareDocs/app/assets/css/main.css) so editor scrolling, content height calculation, and scrollbar behavior fully return to the library defaults while the surrounding ByteMD chrome stays customized
+- Added `private` space visibility across [db/schema.ts](/mnt/f/newworkspace/flareDocs/db/schema.ts), [0001_private_spaces.sql](/mnt/f/newworkspace/flareDocs/db/migrations/0001_private_spaces.sql), APIs, and UI, and introduced automatic per-user personal workspaces through [spaces.ts](/mnt/f/newworkspace/flareDocs/app/server/utils/spaces.ts), [register.post.ts](/mnt/f/newworkspace/flareDocs/app/server/api/auth/register.post.ts), [login.post.ts](/mnt/f/newworkspace/flareDocs/app/server/api/auth/login.post.ts), and [bootstrap.ts](/mnt/f/newworkspace/flareDocs/app/server/utils/bootstrap.ts)
 - Fixed Nuxt server route discovery by pointing [nuxt.config.ts](/mnt/e/workspace/flareDocs/nuxt.config.ts) at [app/server](/mnt/e/workspace/flareDocs/app/server)
 - Added bootstrap admin seeding in [bootstrap.ts](/mnt/e/workspace/flareDocs/app/server/utils/bootstrap.ts) so `admin / admin` exists by default
-- Added lightweight locale state in [useAppLocale.ts](/mnt/e/workspace/flareDocs/app/composables/useAppLocale.ts) and a global switcher in [LocaleSwitch.vue](/mnt/e/workspace/flareDocs/app/components/LocaleSwitch.vue)
+- Added lightweight locale state in [useAppLocale.ts](/mnt/e/workspace/flareDocs/app/composables/useAppLocale.ts) and a UI switcher in [LocaleSwitch.vue](/mnt/e/workspace/flareDocs/app/components/LocaleSwitch.vue)
 - Localized the login, dashboard, workspace, and audit screens with Chinese as the default locale
 - Switched the Markdown editor to tabbed preview and added richer document styles in [main.css](/mnt/e/workspace/flareDocs/app/assets/css/main.css)
 - Corrected remote D1 migration execution to include `--remote` in [package.json](/mnt/e/workspace/flareDocs/package.json)
@@ -199,3 +224,9 @@ After each implementation step:
 1. Update the relevant row in the master checklist
 2. Add a short completion note under `Completed`
 3. Record the next active step under `Current Focus` or `In Progress`
+
+## Recent Notes
+
+- Fixed the homepage space creation flow so invalid names are blocked on the client before submitting.
+- Surfaced API error messages for `POST /api/spaces` instead of exposing a raw `422 Unprocessable Entity`.
+- Refined the homepage layout so the space name and visibility fields sit on the same row, with a denser hero card and cleaner space cards below.

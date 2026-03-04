@@ -24,8 +24,9 @@ export type SpaceSummary = {
   id: number
   name: string
   slug: string
-  visibility: 'team' | 'public'
+  visibility: 'private' | 'team' | 'public'
   createdAt: number
+  isPersonal: boolean
   myRole: 'admin' | 'editor' | 'viewer' | null
 }
 
@@ -33,9 +34,10 @@ export type SpaceDetail = {
   id: number
   name: string
   slug: string
-  visibility: 'team' | 'public'
+  visibility: 'private' | 'team' | 'public'
   createdBy: number | null
   createdAt: number
+  isPersonal: boolean
   myRole: 'admin' | 'editor' | 'viewer' | null
 }
 

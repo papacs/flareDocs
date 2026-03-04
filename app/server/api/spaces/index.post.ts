@@ -9,11 +9,11 @@ import { apiError, ok } from '../../utils/response'
 
 type CreateSpaceBody = {
   name?: string
-  visibility?: 'team' | 'public'
+  visibility?: 'private' | 'team' | 'public'
 }
 
-function isValidVisibility(value: string): value is 'team' | 'public' {
-  return value === 'team' || value === 'public'
+function isValidVisibility(value: string): value is 'private' | 'team' | 'public' {
+  return value === 'private' || value === 'team' || value === 'public'
 }
 
 export default defineEventHandler(async (event) => {
@@ -32,7 +32,7 @@ export default defineEventHandler(async (event) => {
   }
 
   if (!isValidVisibility(visibility)) {
-    return apiError(event, 422, 'INVALID_VISIBILITY', 'Visibility must be either team or public.')
+    return apiError(event, 422, 'INVALID_VISIBILITY', 'Visibility must be private, team, or public.')
   }
 
   const db = getDb(event)
@@ -80,6 +80,7 @@ export default defineEventHandler(async (event) => {
   return ok({
     space: {
       ...createdSpace,
+      isPersonal: false,
       myRole: 'admin' as const
     }
   })
