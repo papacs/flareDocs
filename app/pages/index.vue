@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import type { ApiResponse, AuthUser, SpaceSummary } from '../types/api'
+import {
+  avatarPresetIds,
+  defaultAvatarPresetId,
+  getAvatarPresetMeta
+} from '../utils/avatar-presets'
 import { FetchError } from 'ofetch'
 
 const { roleLabel, t, visibilityLabel } = useAppLocale()
@@ -51,6 +56,65 @@ const isCreateFormValid = computed(
 const createError = ref('')
 const createPending = ref(false)
 const logoutPending = ref(false)
+const settingsOpen = ref(false)
+const profilePending = ref(false)
+const profileError = ref('')
+const profileMessage = ref('')
+const avatarToneClasses = [
+  'bg-gradient-to-br from-amber-200 to-rose-200 text-slate-700',
+  'bg-gradient-to-br from-sky-200 to-indigo-200 text-slate-700',
+  'bg-gradient-to-br from-emerald-200 to-teal-200 text-slate-700',
+  'bg-gradient-to-br from-fuchsia-200 to-violet-200 text-slate-700',
+  'bg-gradient-to-br from-orange-200 to-amber-300 text-slate-700',
+  'bg-gradient-to-br from-cyan-200 to-blue-200 text-slate-700',
+  'bg-gradient-to-br from-lime-200 to-emerald-300 text-slate-700',
+  'bg-gradient-to-br from-slate-200 to-zinc-300 text-slate-700'
+]
+
+const profileForm = reactive<{
+  avatarId: string
+  currentPassword: string
+  newPassword: string
+}>({
+  avatarId: defaultAvatarPresetId,
+  currentPassword: '',
+  newPassword: ''
+})
+
+watch(
+  currentUser,
+  (user) => {
+    profileForm.avatarId = user?.avatarId ?? defaultAvatarPresetId
+  },
+  { immediate: true }
+)
+
+const currentAvatarToneClass = computed(() =>
+  currentUser.value
+    ? resolveAvatarToneClass(currentUser.value.avatarId)
+    : 'bg-gradient-to-br from-slate-200 to-slate-300 text-slate-600'
+)
+const currentAvatarSymbol = computed(() =>
+  currentUser.value ? getAvatarPresetMeta(currentUser.value.avatarId).symbol : '?'
+)
+const currentAvatarName = computed(() =>
+  currentUser.value ? getAvatarPresetMeta(currentUser.value.avatarId).zhName : ''
+)
+
+function resolveAvatarToneClass(avatarId: string) {
+  const index = avatarPresetIds.findIndex((presetId) => presetId === avatarId)
+  const safeIndex = index >= 0 ? index : 0
+  return avatarToneClasses[safeIndex % avatarToneClasses.length]
+}
+
+function readApiErrorMessage(payload: unknown) {
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+
+  const maybeError = (payload as { error?: { message?: string }; ok?: boolean }).error?.message
+  return typeof maybeError === 'string' ? maybeError : null
+}
 
 async function createSpace() {
   if (!isCreateFormValid.value) {
@@ -62,13 +126,13 @@ async function createSpace() {
   createError.value = ''
 
   try {
-    const response = (await $fetch('/api/spaces', {
+    const response = await $fetch<ApiResponse<{ space: { id: number } }>>('/api/spaces', {
       method: 'POST',
       body: {
         name: normalizedSpaceName.value,
         visibility: createForm.visibility
       }
-    })) as ApiResponse<{ space: { id: number } }>
+    })
 
     createForm.name = ''
     await refreshSpaces()
@@ -78,7 +142,7 @@ async function createSpace() {
     }
   } catch (error) {
     if (error instanceof FetchError) {
-      const errorMessage = (error.data as ApiResponse<never> | undefined)?.error?.message
+      const errorMessage = readApiErrorMessage(error.data)
       createError.value = errorMessage ?? t('index.createSpaceFailed')
     } else {
       createError.value = error instanceof Error ? error.message : t('index.createSpaceFailed')
@@ -99,6 +163,55 @@ async function logout() {
     await Promise.all([refreshMe(), refreshSpaces()])
   } finally {
     logoutPending.value = false
+  }
+}
+
+async function saveProfile() {
+  if (!currentUser.value) {
+    return
+  }
+
+  profilePending.value = true
+  profileError.value = ''
+  profileMessage.value = ''
+
+  try {
+    const body: {
+      avatarId: string
+      currentPassword?: string
+      newPassword?: string
+    } = {
+      avatarId: profileForm.avatarId
+    }
+
+    if (profileForm.currentPassword || profileForm.newPassword) {
+      body.currentPassword = profileForm.currentPassword
+      body.newPassword = profileForm.newPassword
+    }
+
+    const response = await $fetch<ApiResponse<{ user: AuthUser }>>('/api/auth/profile', {
+      method: 'PATCH',
+      body
+    })
+
+    if (!response.ok) {
+      profileError.value = response.error.message
+      return
+    }
+
+    profileForm.currentPassword = ''
+    profileForm.newPassword = ''
+    profileMessage.value = t('index.profileSaved')
+    await refreshMe()
+  } catch (error) {
+    if (error instanceof FetchError) {
+      const errorMessage = readApiErrorMessage(error.data)
+      profileError.value = errorMessage ?? t('index.profileSaveFailed')
+    } else {
+      profileError.value = error instanceof Error ? error.message : t('index.profileSaveFailed')
+    }
+  } finally {
+    profilePending.value = false
   }
 }
 </script>
@@ -141,7 +254,7 @@ async function logout() {
               >
                 {{ t('index.openPersonalWorkspace') }}
               </UButton>
-              <UButton v-else size="lg" color="neutral" to="/login">{{ t('index.loginOrRegister') }}</UButton>
+              <UButton v-else size="lg" color="neutral" to="/login">{{ t('index.loginOnly') }}</UButton>
               <UButton size="lg" color="neutral" variant="ghost" to="https://developers.cloudflare.com/pages/">
                 {{ t('index.cloudflareTarget') }}
               </UButton>
@@ -165,23 +278,37 @@ async function logout() {
         </div>
 
         <div class="rounded-[1.75rem] border border-[rgba(31,41,55,0.08)] bg-[rgba(248,244,236,0.82)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] backdrop-blur sm:p-5">
-          <div class="flex items-center justify-between gap-3">
-            <div>
-              <p class="text-sm uppercase tracking-[0.22em] text-slate-500">{{ t('index.session') }}</p>
-              <h2 class="mt-2 text-2xl font-semibold text-slate-800">
-                {{ currentUser ? currentUser.username : t('index.guestMode') }}
-              </h2>
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <span
+                class="inline-flex h-12 w-12 items-center justify-center rounded-full text-sm font-semibold tracking-[0.08em]"
+                :class="currentAvatarToneClass"
+              >
+                {{ currentAvatarSymbol }}
+              </span>
+              <div>
+                <p class="text-sm uppercase tracking-[0.22em] text-slate-500">{{ t('index.session') }}</p>
+                <h2 class="mt-1 text-2xl font-semibold text-slate-800">
+                  {{ currentUser ? currentUser.username : t('index.guestMode') }}
+                </h2>
+                <p v-if="currentUser" class="text-xs text-slate-500">{{ currentAvatarName }}</p>
+                <p v-if="currentUser?.isSystemAdmin" class="text-xs font-medium text-amber-700">
+                  {{ t('index.systemAdmin') }}
+                </p>
+              </div>
             </div>
 
-            <UButton
-              v-if="currentUser"
-              color="neutral"
-              variant="ghost"
-              :loading="logoutPending"
-              @click="logout"
-            >
-              {{ t('index.logout') }}
-            </UButton>
+            <div v-if="currentUser" class="flex flex-wrap items-center justify-end gap-2">
+              <UButton color="neutral" variant="ghost" @click="settingsOpen = !settingsOpen">
+                {{ t('index.profileSettings') }}
+              </UButton>
+              <UButton v-if="currentUser.isSystemAdmin" color="neutral" variant="ghost" to="/admin/users">
+                {{ t('index.userManagement') }}
+              </UButton>
+              <UButton color="neutral" variant="ghost" :loading="logoutPending" @click="logout">
+                {{ t('index.logout') }}
+              </UButton>
+            </div>
           </div>
 
           <div class="mt-5 space-y-4">
@@ -193,6 +320,60 @@ async function logout() {
                 {{ t('index.guestHint') }}
               </p>
             </div>
+
+            <form v-if="currentUser && settingsOpen" class="space-y-3 rounded-2xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.72)] p-4" @submit.prevent="saveProfile">
+              <p class="text-sm font-medium text-slate-700">{{ t('index.profilePanelHint') }}</p>
+
+              <div class="grid grid-cols-4 gap-2">
+                <button
+                  v-for="avatarId in avatarPresetIds"
+                  :key="avatarId"
+                  type="button"
+                  class="rounded-xl border p-2 text-center transition"
+                  :class="[
+                    profileForm.avatarId === avatarId
+                      ? 'border-[rgba(31,41,55,0.45)] shadow-sm'
+                      : 'border-[rgba(31,41,55,0.1)] hover:border-[rgba(31,41,55,0.25)]',
+                    resolveAvatarToneClass(avatarId)
+                  ]"
+                  @click="profileForm.avatarId = avatarId"
+                >
+                  <span class="text-lg leading-none">
+                    {{ getAvatarPresetMeta(avatarId).symbol }}
+                  </span>
+                  <span class="mt-1 block text-[11px] font-semibold tracking-[0.03em]">
+                    {{ getAvatarPresetMeta(avatarId).zhName }}
+                  </span>
+                </button>
+              </div>
+
+              <div class="grid gap-3 sm:grid-cols-2">
+                <UInput
+                  v-model="profileForm.currentPassword"
+                  size="lg"
+                  type="password"
+                  autocomplete="current-password"
+                  :placeholder="t('index.currentPassword')"
+                />
+                <UInput
+                  v-model="profileForm.newPassword"
+                  size="lg"
+                  type="password"
+                  autocomplete="new-password"
+                  :placeholder="t('index.newPassword')"
+                />
+              </div>
+
+              <p class="text-xs leading-5 text-slate-500">{{ t('index.passwordHint') }}</p>
+              <p v-if="profileError" class="text-sm text-rose-600">{{ profileError }}</p>
+              <p v-if="profileMessage" class="text-sm text-emerald-700">{{ profileMessage }}</p>
+
+              <div class="flex justify-end">
+                <UButton type="submit" color="neutral" :loading="profilePending">
+                  {{ t('index.saveProfile') }}
+                </UButton>
+              </div>
+            </form>
 
             <form v-if="currentUser" class="space-y-3" @submit.prevent="createSpace">
               <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem]">
@@ -231,12 +412,49 @@ async function logout() {
                 </UButton>
               </div>
             </form>
+
+            <div
+              v-else
+              class="flex min-h-[16rem] flex-col justify-between rounded-2xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.72)] p-4"
+            >
+              <div>
+                <p class="text-sm font-semibold text-slate-700">{{ t('index.guestPanelTitle') }}</p>
+                <p class="mt-2 text-sm leading-6 text-slate-500">
+                  {{ t('index.guestPanelSummary', { count: publicSpacesCount }) }}
+                </p>
+
+                <div class="mt-4 space-y-2">
+                  <p class="rounded-xl bg-[rgba(248,244,236,0.8)] px-3 py-2 text-xs text-slate-600">
+                    {{ t('index.guestPanelFeatureRead') }}
+                  </p>
+                  <p class="rounded-xl bg-[rgba(248,244,236,0.8)] px-3 py-2 text-xs text-slate-600">
+                    {{ t('index.guestPanelFeatureManage') }}
+                  </p>
+                  <p class="rounded-xl bg-[rgba(248,244,236,0.8)] px-3 py-2 text-xs text-slate-600">
+                    {{ t('index.guestPanelFeaturePrivate') }}
+                  </p>
+                </div>
+              </div>
+
+              <div class="mt-5 flex flex-wrap items-center justify-between gap-2">
+                <UButton size="lg" color="neutral" to="/login">{{ t('index.loginOnly') }}</UButton>
+                <UButton
+                  v-if="publicSpacesCount > 0"
+                  size="lg"
+                  color="neutral"
+                  variant="ghost"
+                  to="#spaces-list"
+                >
+                  {{ t('index.guestPanelOpenPublic') }}
+                </UButton>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <section id="spaces-list" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       <article
         v-for="space in spaces"
         :key="space.id"

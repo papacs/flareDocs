@@ -2,7 +2,6 @@
 import type { ApiResponse, AuthUser } from '../types/api'
 
 const { t } = useAppLocale()
-const mode = ref<'login' | 'register'>('login')
 const currentUser = ref<null | { id: number; username: string }>(null)
 const unauthenticatedUserResponse: ApiResponse<{ user: AuthUser }> = {
   ok: false,
@@ -33,7 +32,7 @@ async function submit() {
   errorMessage.value = ''
 
   try {
-    await $fetch(`/api/auth/${mode.value}`, {
+    await $fetch('/api/auth/login', {
       method: 'POST',
       body: {
         username: form.username,
@@ -86,42 +85,18 @@ async function submit() {
 
       <div class="fd-auth-card">
         <div class="fd-auth-glow" aria-hidden="true" />
-        <div class="flex gap-2 rounded-2xl bg-[rgba(244,238,229,0.8)] p-2">
-          <button
-            type="button"
-            class="flex-1 rounded-xl px-4 py-3 text-sm font-semibold transition"
-            :class="
-              mode === 'login'
-                ? 'bg-white text-slate-800 shadow-sm'
-                : 'text-slate-500 hover:text-slate-800'
-            "
-            @click="mode = 'login'"
-          >
-            {{ t('login.tabLogin') }}
-          </button>
-          <button
-            type="button"
-            class="flex-1 rounded-xl px-4 py-3 text-sm font-semibold transition"
-            :class="
-              mode === 'register'
-                ? 'bg-white text-slate-800 shadow-sm'
-                : 'text-slate-500 hover:text-slate-800'
-            "
-            @click="mode = 'register'"
-          >
-            {{ t('login.tabRegister') }}
-          </button>
-        </div>
-
         <div class="mt-6">
           <p class="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--fd-accent)]">
-            {{ mode === 'login' ? t('login.tabLogin') : t('login.tabRegister') }}
+            {{ t('login.tabLogin') }}
           </p>
           <h2 class="mt-3 text-2xl text-slate-900" style="font-family: var(--fd-font-serif)">
-            {{ mode === 'login' ? t('login.panelTitleLogin') : t('login.panelTitleRegister') }}
+            {{ t('login.panelTitleLogin') }}
           </h2>
           <p class="mt-2 text-sm leading-6 text-slate-500">
-            {{ mode === 'login' ? t('login.panelSummaryLogin') : t('login.panelSummaryRegister') }}
+            {{ t('login.panelSummaryLogin') }}
+          </p>
+          <p class="mt-2 text-xs leading-5 text-slate-400">
+            {{ t('login.adminCreateOnly') }}
           </p>
         </div>
 
@@ -147,7 +122,7 @@ async function submit() {
           </div>
           <p v-if="errorMessage" class="text-sm text-rose-600">{{ errorMessage }}</p>
           <UButton type="submit" block size="xl" color="neutral" class="fd-auth-submit" :loading="pending">
-            {{ mode === 'login' ? t('login.submitLogin') : t('login.submitRegister') }}
+            {{ t('login.submitLogin') }}
           </UButton>
           <UButton block size="xl" color="neutral" variant="ghost" class="fd-auth-back" to="/">
             {{ t('login.back') }}

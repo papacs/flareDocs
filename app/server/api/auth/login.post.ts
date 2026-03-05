@@ -31,6 +31,9 @@ export default defineEventHandler(async (event) => {
     .select({
       id: users.id,
       username: users.username,
+      avatarId: users.avatarId,
+      isSystemAdmin: users.isSystemAdmin,
+      isActive: users.isActive,
       passwordHash: users.passwordHash,
       createdAt: users.createdAt
     })
@@ -42,17 +45,17 @@ export default defineEventHandler(async (event) => {
     return apiError(event, 401, 'INVALID_CREDENTIALS', 'Invalid username or password.')
   }
 
+  if (!user.isActive) {
+    return apiError(event, 403, 'ACCOUNT_DISABLED', 'This account is disabled. Contact an administrator.')
+  }
+
   const passwordMatches = await verifyPassword(password, user.passwordHash)
 
   if (!passwordMatches) {
     return apiError(event, 401, 'INVALID_CREDENTIALS', 'Invalid username or password.')
   }
 
-  await ensurePersonalWorkspace(db, {
-    id: user.id,
-    username: user.username,
-    createdAt: user.createdAt
-  })
+  await ensurePersonalWorkspace(db, user)
 
   const token = await issueAuthToken(event, {
     userId: user.id,
@@ -71,6 +74,9 @@ export default defineEventHandler(async (event) => {
     user: {
       id: user.id,
       username: user.username,
+      avatarId: user.avatarId,
+      isSystemAdmin: user.isSystemAdmin,
+      isActive: user.isActive,
       createdAt: user.createdAt
     }
   })

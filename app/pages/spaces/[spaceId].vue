@@ -157,6 +157,13 @@ const space = computed(() =>
 const spaces = computed(() =>
   spacesResponse.value && spacesResponse.value.ok ? spacesResponse.value.data.spaces : []
 )
+const isCurrentSpaceInList = computed(() => {
+  if (!space.value) {
+    return false
+  }
+
+  return spaces.value.some((workspace) => workspace.id === space.value?.id)
+})
 const treeItems = computed(() =>
   treeResponse.value && treeResponse.value.ok ? treeResponse.value.data.documents : []
 )
@@ -548,9 +555,10 @@ async function loadDocument(documentId: number | null) {
   }
 
   try {
-    const response = (await $fetch(`/api/spaces/${spaceId.value}/docs/${documentId}`, {
+    const endpoint = `/api/spaces/${spaceId.value}/docs/${documentId}` as string
+    const response = await $fetch<ApiResponse<{ document: DocumentDetail }>>(endpoint, {
       headers: requestHeaders
-    })) as ApiResponse<{ document: DocumentDetail }>
+    })
 
     if (response.ok) {
       workspaceError.value = ''
@@ -619,7 +627,8 @@ async function saveDocument() {
   conflictMessage.value = ''
 
   try {
-    const response = (await $fetch(`/api/spaces/${spaceId.value}/docs/${selectedDocument.value.id}`, {
+    const endpoint = `/api/spaces/${spaceId.value}/docs/${selectedDocument.value.id}` as string
+    const response = await $fetch<ApiResponse<{ document: DocumentDetail }>>(endpoint, {
       method: 'PUT',
       body: {
         title: draft.title,
@@ -627,7 +636,7 @@ async function saveDocument() {
         parentId: selectedDocument.value.parentId,
         version: selectedDocument.value.version
       }
-    })) as ApiResponse<{ document: DocumentDetail }>
+    })
 
     if (response.ok) {
       selectedDocument.value = response.data.document
@@ -686,14 +695,15 @@ async function createNode() {
   }
 
   try {
-    const response = (await $fetch(`/api/spaces/${spaceId.value}/docs`, {
+    const endpoint = `/api/spaces/${spaceId.value}/docs` as string
+    const response = await $fetch<ApiResponse<{ document: DocumentDetail }>>(endpoint, {
       method: 'POST',
       body: {
         title,
         parentId: selectedParentIdForCreate.value,
         isFolder: createNodeMode.value === 'folder'
       }
-    })) as ApiResponse<{ document: DocumentDetail }>
+    })
 
     createNodeTitle.value = ''
     createNodeMode.value = null
@@ -732,7 +742,8 @@ async function deleteDocument() {
   deletePending.value = true
 
   try {
-    await $fetch(`/api/spaces/${spaceId.value}/docs/${selectedDocument.value.id}`, {
+    const endpoint = `/api/spaces/${spaceId.value}/docs/${selectedDocument.value.id}` as string
+    await $fetch(endpoint, {
       method: 'DELETE',
       body: {}
     })
@@ -754,7 +765,8 @@ async function moveDocument() {
   workspaceError.value = ''
 
   try {
-    const response = (await $fetch(`/api/spaces/${spaceId.value}/docs/${selectedDocument.value.id}`, {
+    const endpoint = `/api/spaces/${spaceId.value}/docs/${selectedDocument.value.id}` as string
+    const response = await $fetch<ApiResponse<{ document: DocumentDetail }>>(endpoint, {
       method: 'PUT',
       body: {
         title: selectedDocument.value.title,
@@ -762,7 +774,7 @@ async function moveDocument() {
         parentId: moveTargetParentId.value === 'root' ? null : Number(moveTargetParentId.value),
         version: selectedDocument.value.version
       }
-    })) as ApiResponse<{ document: DocumentDetail }>
+    })
 
     if (response.ok) {
       selectedDocument.value = response.data.document
@@ -922,7 +934,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
                 {{ workspace.name }}
               </option>
               <option
-                v-if="space && !spaces.some((workspace) => workspace.id === space.id)"
+                v-if="space && !isCurrentSpaceInList"
                 :value="space.id"
               >
                 {{ space.name }}

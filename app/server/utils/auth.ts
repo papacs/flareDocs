@@ -94,13 +94,24 @@ export async function getAuthenticatedUser(event: H3Event) {
     .select({
       id: users.id,
       username: users.username,
+      avatarId: users.avatarId,
+      isSystemAdmin: users.isSystemAdmin,
+      isActive: users.isActive,
       createdAt: users.createdAt
     })
     .from(users)
     .where(eq(users.id, session.userId))
     .limit(1)
 
-  return user ?? null
+  if (!user || !user.isActive) {
+    return null
+  }
+
+  return user
+}
+
+export function isSystemAdminUser(user: { isSystemAdmin?: boolean } | null | undefined) {
+  return Boolean(user?.isSystemAdmin)
 }
 
 export function clearAuthCookie(event: H3Event) {

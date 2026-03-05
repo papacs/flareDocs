@@ -12,6 +12,9 @@ export async function ensureDefaultAdmin(event: H3Event) {
     .select({
       id: users.id,
       username: users.username,
+      avatarId: users.avatarId,
+      isSystemAdmin: users.isSystemAdmin,
+      isActive: users.isActive,
       createdAt: users.createdAt
     })
     .from(users)
@@ -19,6 +22,19 @@ export async function ensureDefaultAdmin(event: H3Event) {
     .limit(1)
 
   if (existingAdmin) {
+    if (!existingAdmin.isSystemAdmin || !existingAdmin.isActive) {
+      await db
+        .update(users)
+        .set({ isSystemAdmin: true, isActive: true })
+        .where(eq(users.id, existingAdmin.id))
+
+      return {
+        ...existingAdmin,
+        isSystemAdmin: true,
+        isActive: true
+      }
+    }
+
     return existingAdmin
   }
 
@@ -27,7 +43,10 @@ export async function ensureDefaultAdmin(event: H3Event) {
     .insert(users)
     .values({
       username: 'admin',
-      passwordHash
+      passwordHash,
+      avatarId: 'qq-classic-01',
+      isSystemAdmin: true,
+      isActive: true
     })
     .onConflictDoNothing({
       target: users.username
@@ -37,6 +56,9 @@ export async function ensureDefaultAdmin(event: H3Event) {
     .select({
       id: users.id,
       username: users.username,
+      avatarId: users.avatarId,
+      isSystemAdmin: users.isSystemAdmin,
+      isActive: users.isActive,
       createdAt: users.createdAt
     })
     .from(users)

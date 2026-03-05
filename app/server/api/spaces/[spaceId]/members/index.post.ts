@@ -6,7 +6,7 @@ import { getAuthenticatedUser } from '../../../../utils/auth'
 import { getDb } from '../../../../utils/db'
 import { getNumericRouteParam } from '../../../../utils/request'
 import { apiError, ok } from '../../../../utils/response'
-import { assertSpaceRole, SpaceAccessError } from '../../../../utils/spaces'
+import { assertSpaceRole, isPersonalWorkspace, SpaceAccessError } from '../../../../utils/spaces'
 
 type AddMemberBody = {
   username?: string
@@ -26,15 +26,33 @@ export default defineEventHandler(async (event) => {
 
   const user = await getAuthenticatedUser(event)
   const db = getDb(event)
+  let space: {
+    id: number
+    name: string
+    slug: string
+    visibility: 'private' | 'team' | 'public'
+    createdBy: number | null
+    createdAt: number
+  } | null = null
 
   try {
-    await assertSpaceRole(db, spaceId, user, 'admin')
+    const context = await assertSpaceRole(db, spaceId, user, 'admin')
+    space = context.space
   } catch (error) {
     if (error instanceof SpaceAccessError) {
       return apiError(event, error.statusCode, error.code, error.message)
     }
 
     return apiError(event, 500, 'SPACE_PERMISSION_FAILED', 'Unable to verify permissions.')
+  }
+
+  if (space && isPersonalWorkspace(space, user)) {
+    return apiError(
+      event,
+      403,
+      'PERSONAL_SPACE_MEMBERS_LOCKED',
+      'Personal workspaces do not support member sharing.'
+    )
   }
 
   const body = await readBody<AddMemberBody>(event)

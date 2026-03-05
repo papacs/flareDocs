@@ -17,6 +17,9 @@ export type ApiResponse<T> = ApiSuccess<T> | ApiFailure
 export type AuthUser = {
   id: number
   username: string
+  avatarId: string
+  isSystemAdmin: boolean
+  isActive: boolean
   createdAt: number
 }
 

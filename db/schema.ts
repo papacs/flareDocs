@@ -19,6 +19,9 @@ export const users = sqliteTable('users', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   username: text('username').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
+  avatarId: text('avatar_id').notNull().default('qq-classic-01'),
+  isSystemAdmin: integer('is_system_admin', { mode: 'boolean' }).notNull().default(false),
+  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
   createdAt: integer('created_at')
     .notNull()
     .default(sql`(unixepoch())`)

@@ -14,7 +14,7 @@
 | 0 | Create baseline repository docs | Done | `README.md`, `AGENTS.md`, `TASKS.md` created |
 | 1 | Initialize Nuxt baseline + TS + Tailwind + ESLint/Prettier + Nuxt UI | Done | Current scaffold is Nuxt 4.3.1; prompt originally asked for Nuxt 3 |
 | 2 | Integrate Drizzle + D1 schema + migrations | Done | Schema, initial migration, D1 helper, and health endpoint added |
-| 3 | Implement users + auth APIs | Done | JWT cookie, register, login, logout, `me`, and same-origin middleware |
+| 3 | Implement users + auth APIs | Done | JWT cookie, admin-created accounts, login/logout/`me`, and same-origin middleware |
 | 4 | Implement spaces + membership + RBAC helper | Done | Space CRUD entry points and member management routes added |
 | 5 | Implement documents CRUD + tree + optimistic lock | Done | Tree endpoint, CRUD, parent checks, and 409 conflict response added |
 | 6 | Add ByteMD editor and document UI | Done | Responsive login, dashboard, workspace, and version-aware save flow added |
@@ -26,6 +26,7 @@
 
 - Validation and Cloudflare provisioning follow-up
 - Reinstall dependencies on the active platform before re-running Nuxt validation
+- Current sandbox has no outbound network; `pnpm install` fails with `EAI_AGAIN`, so lint/typecheck validation must be re-run on a networked machine
 
 ## Completed
 
@@ -175,6 +176,18 @@ Date: 2026-03-04
 - Corrected remote D1 migration execution to include `--remote` in [package.json](/mnt/e/workspace/flareDocs/package.json)
 - Validation now needs a fresh `pnpm install` on the active OS because this workspace has mixed Linux/Windows native dependencies
 
+Date: 2026-03-05
+
+- Disabled self-registration in [register.post.ts](/mnt/e/workspace/flareDocs/app/server/api/auth/register.post.ts) and switched to admin-created accounts only
+- Added user profile updates in [profile.patch.ts](/mnt/e/workspace/flareDocs/app/server/api/auth/profile.patch.ts) and preset avatar utilities in [avatar-presets.ts](/mnt/e/workspace/flareDocs/app/utils/avatar-presets.ts)
+- Added system admin user management APIs in [app/server/api/admin/users](/mnt/e/workspace/flareDocs/app/server/api/admin/users) and the admin page in [users.vue](/mnt/e/workspace/flareDocs/app/pages/admin/users.vue)
+- Extended user schema with `avatar_id` and `is_system_admin` in [db/schema.ts](/mnt/e/workspace/flareDocs/db/schema.ts) and [0002_users_admin_avatar.sql](/mnt/e/workspace/flareDocs/db/migrations/0002_users_admin_avatar.sql)
+- Updated homepage/login flows in [index.vue](/mnt/e/workspace/flareDocs/app/pages/index.vue) and [login.vue](/mnt/e/workspace/flareDocs/app/pages/login.vue) for personal settings and admin entry points
+- Hardened member management rules in [app/server/api/spaces/[spaceId]/members](/mnt/e/workspace/flareDocs/app/server/api/spaces/[spaceId]/members): personal workspace no-share and last-admin protection
+- Added account activation state in [db/schema.ts](/mnt/e/workspace/flareDocs/db/schema.ts) and [0003_users_active_flag.sql](/mnt/e/workspace/flareDocs/db/migrations/0003_users_active_flag.sql), plus login blocking for disabled users in [login.post.ts](/mnt/e/workspace/flareDocs/app/server/api/auth/login.post.ts)
+- Expanded admin account operations in [app/server/api/admin/users/[userId].patch.ts](/mnt/e/workspace/flareDocs/app/server/api/admin/users/[userId].patch.ts) and [app/server/api/admin/users/[userId].delete.ts](/mnt/e/workspace/flareDocs/app/server/api/admin/users/[userId].delete.ts): enable/disable, grant/revoke admin, reset password, delete, and last-active-admin guard
+- Refined [users.vue](/mnt/e/workspace/flareDocs/app/pages/admin/users.vue) with icon-based home navigation and per-user operation controls, and upgraded avatar presentation to QQ-classic-style preset icons in [index.vue](/mnt/e/workspace/flareDocs/app/pages/index.vue) and [avatar-presets.ts](/mnt/e/workspace/flareDocs/app/utils/avatar-presets.ts)
+
 ## In Progress
 
 None.
@@ -230,3 +243,8 @@ After each implementation step:
 - Fixed the homepage space creation flow so invalid names are blocked on the client before submitting.
 - Surfaced API error messages for `POST /api/spaces` instead of exposing a raw `422 Unprocessable Entity`.
 - Refined the homepage layout so the space name and visibility fields sit on the same row, with a denser hero card and cleaner space cards below.
+- Changed account onboarding to admin-only creation and removed the free registration path from the login UI.
+- Added preset avatar selection and password change on the homepage profile panel.
+- Added admin-only account management and stricter space-member constraints (personal workspace lock + last admin guard).
+- Added full admin account lifecycle operations (enable/disable/delete/reset password/set admin) with backend safety checks.
+- Refined homepage guest-mode layout in [index.vue](/mnt/e/workspace/flareDocs/app/pages/index.vue) by adding a full quick-start guidance card and public-space shortcut to remove the large empty area when not logged in.
