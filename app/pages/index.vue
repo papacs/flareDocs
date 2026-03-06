@@ -10,6 +10,7 @@ import { FetchError } from 'ofetch'
 
 const { t, visibilityLabel } = useAppLocale()
 const { appearance, setAppearance } = useAppearance()
+const githubRepoUrl = 'https://github.com/papacs/flareDocs'
 const cookieHeaders = import.meta.server ? useRequestHeaders(['cookie']) : undefined
 const recentSpaceStorageKey = 'fd-recent-space-id'
 const unauthenticatedUserResponse: ApiResponse<{ user: AuthUser }> = {
@@ -448,47 +449,59 @@ async function saveProfile() {
           <div>
             <div class="flex items-center justify-between gap-3">
               <BrandMark size="sm" />
-              <div class="flex items-center gap-2 sm:hidden">
-                <template v-if="currentUser">
-                  <UButton
-                    color="neutral"
-                    variant="ghost"
-                    size="sm"
-                    class="h-9 w-9 justify-center p-0"
-                    :title="t('index.profileSettings')"
-                    :aria-label="t('index.profileSettings')"
-                    @click="settingsOpen = !settingsOpen"
-                  >
-                    <WorkspaceIcon name="settings" class="h-4 w-4" />
+              <div class="flex items-center gap-2">
+                <a
+                  class="fd-home-icon-link"
+                  :href="githubRepoUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="GitHub"
+                  title="GitHub"
+                >
+                  <WorkspaceIcon name="github" class="h-4 w-4" />
+                </a>
+                <div class="flex items-center gap-2 sm:hidden">
+                  <template v-if="currentUser">
+                    <UButton
+                      color="neutral"
+                      variant="ghost"
+                      size="sm"
+                      class="h-9 w-9 justify-center p-0"
+                      :title="t('index.profileSettings')"
+                      :aria-label="t('index.profileSettings')"
+                      @click="settingsOpen = !settingsOpen"
+                    >
+                      <WorkspaceIcon name="settings" class="h-4 w-4" />
+                    </UButton>
+                    <UButton
+                      v-if="currentUser.isSystemAdmin"
+                      color="neutral"
+                      variant="ghost"
+                      size="sm"
+                      class="h-9 w-9 justify-center p-0"
+                      :title="t('index.userManagement')"
+                      :aria-label="t('index.userManagement')"
+                      to="/admin/users"
+                    >
+                      <WorkspaceIcon name="users" class="h-4 w-4" />
+                    </UButton>
+                    <UButton
+                      color="neutral"
+                      variant="ghost"
+                      size="sm"
+                      class="h-9 w-9 justify-center p-0"
+                      :title="t('index.logout')"
+                      :aria-label="t('index.logout')"
+                      :loading="logoutPending"
+                      @click="logout"
+                    >
+                      <WorkspaceIcon name="logout" class="h-4 w-4" />
+                    </UButton>
+                  </template>
+                  <UButton v-else color="neutral" variant="ghost" size="sm" class="h-9 px-3" to="/login">
+                    {{ t('index.loginOnly') }}
                   </UButton>
-                  <UButton
-                    v-if="currentUser.isSystemAdmin"
-                    color="neutral"
-                    variant="ghost"
-                    size="sm"
-                    class="h-9 w-9 justify-center p-0"
-                    :title="t('index.userManagement')"
-                    :aria-label="t('index.userManagement')"
-                    to="/admin/users"
-                  >
-                    <WorkspaceIcon name="users" class="h-4 w-4" />
-                  </UButton>
-                  <UButton
-                    color="neutral"
-                    variant="ghost"
-                    size="sm"
-                    class="h-9 w-9 justify-center p-0"
-                    :title="t('index.logout')"
-                    :aria-label="t('index.logout')"
-                    :loading="logoutPending"
-                    @click="logout"
-                  >
-                    <WorkspaceIcon name="logout" class="h-4 w-4" />
-                  </UButton>
-                </template>
-                <UButton v-else color="neutral" variant="ghost" size="sm" class="h-9 px-3" to="/login">
-                  {{ t('index.loginOnly') }}
-                </UButton>
+                </div>
               </div>
             </div>
             <h1

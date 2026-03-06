@@ -239,6 +239,7 @@ pnpm dev
 pnpm lint
 pnpm typecheck
 pnpm build
+pnpm deploy:pages:first -- --project-name=<your-pages-project-name> --d1-database-id=<your-d1-id> --r2-bucket=<your-r2-bucket> --r2-preview-bucket=<your-r2-preview-bucket>
 ```
 
 ### 数据库相关命令
@@ -294,36 +295,73 @@ pnpm project:setup
 
 ## Cloudflare 部署准备
 
-如果你要接入真实 Cloudflare 资源，基本顺序如下：
+### 完整首次部署步骤
 
-1. 创建 D1 数据库
+1. 登录 Wrangler
+
+```bash
+pnpm wrangler login
+```
+
+2. 创建云端资源（第一次需要）
 
 ```bash
 pnpm wrangler d1 create flaredocs-db
+pnpm wrangler r2 bucket create flaredocs-assets-prod
+pnpm wrangler r2 bucket create flaredocs-assets-preview
 ```
 
-2. 创建 R2 Bucket
+3. 执行一键首次部署（推荐）
 
 ```bash
-pnpm wrangler r2 bucket create <your-bucket>
+pnpm deploy:pages:first -- --project-name=<your-pages-project-name> --d1-database-id=<your-d1-id> --r2-bucket=<your-r2-bucket> --r2-preview-bucket=<your-r2-preview-bucket>
 ```
 
-3. 用真实资源信息更新本地 `wrangler.toml`
-- `database_id`
-- `bucket_name`
-- `preview_bucket_name`
+脚本会自动执行：
+- `project:setup`（生成/更新 `.env`、`wrangler.toml`）
+- `wrangler whoami`（失败仅警告，不中断）
+- 创建 Pages 项目
+- 写入 Pages secrets：`NUXT_AUTH_SECRET`、`NUXT_BOOTSTRAP_ADMIN_PASSWORD`
+- `db:migrate:remote`
+- `build`
+- `wrangler pages deploy dist`
 
-也可以直接重新运行：
+4. 首次登录
+- 用户名固定：`admin`
+- 密码：部署脚本末尾输出的初始密码
+- 首登后请立即修改密码，并在 Pages Secrets 中移除 `NUXT_BOOTSTRAP_ADMIN_PASSWORD`
+
+### 参数说明（deploy:pages:first）
+
+- `--project-name=<name>`：必填，Pages 项目名
+- `--d1-database-id=<id>`：建议首次部署时填写
+- `--r2-bucket=<bucket>`：生产桶名
+- `--r2-preview-bucket=<bucket>`：预览桶名（可与生产同名，但不推荐）
+- `--auth-secret=<secret>`：可选，不传则自动生成
+- `--bootstrap-admin-password=<password>`：可选，不传则自动生成
+- `--production-branch=<branch>`：默认 `main`
+- `--skip-setup`：跳过 `project:setup`
+- `--skip-project-create`：跳过 Pages 项目创建
+- `--skip-migrate`：跳过远程 migration
+- `--skip-build`：跳过构建
+- `--dry-run`：只打印流程，不执行
+
+### 常见部署问题
+
+1. `Failed to create Pages project`
+- 常见原因：项目已存在，或当前 Cloudflare 账号无权限
+- 处理：
 
 ```bash
-pnpm project:setup -- --d1-database-id=<your-d1-id> --r2-bucket=<your-r2-bucket> --r2-preview-bucket=<your-preview-bucket>
+pnpm wrangler pages project list
+pnpm deploy:pages:first -- --project-name=<your-pages-project-name> --skip-setup --skip-project-create
 ```
 
-4. 应用远程 migration
+2. PowerShell 多行命令异常
+- 建议用单行命令执行；不要用 `\` 当续行符（PowerShell 续行建议用反引号）
 
-```bash
-pnpm db:migrate:remote
-```
+3. `wrangler whoami` 失败但已登录
+- 脚本已处理为警告并继续；最终以 `pages deploy` 是否成功为准
 
 ## 关键实现说明
 

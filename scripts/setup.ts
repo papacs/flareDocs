@@ -4,6 +4,7 @@ import { join } from 'node:path'
 
 type SetupOptions = {
   authSecret?: string
+  bootstrapAdminPassword?: string
   d1DatabaseId?: string
   dryRun: boolean
   r2Bucket?: string
@@ -30,6 +31,8 @@ function parseArgs(argv: string[]): SetupOptions {
 
     if (key === '--auth-secret') {
       options.authSecret = value
+    } else if (key === '--bootstrap-admin-password') {
+      options.bootstrapAdminPassword = value
     } else if (key === '--d1-database-id') {
       options.d1DatabaseId = value
     } else if (key === '--r2-bucket') {
@@ -46,10 +49,24 @@ function ensureTrailingNewline(value: string) {
   return value.endsWith('\n') ? value : `${value}\n`
 }
 
-function updateEnvFile(source: string, authSecret: string) {
-  const nextSource = source.match(/^NUXT_AUTH_SECRET=/m)
-    ? source.replace(/^NUXT_AUTH_SECRET=.*$/m, `NUXT_AUTH_SECRET=${authSecret}`)
-    : `NUXT_AUTH_SECRET=${authSecret}\n${source}`
+function upsertEnvValue(source: string, key: string, value: string) {
+  if (source.match(new RegExp(`^${key}=`, 'm'))) {
+    return source.replace(new RegExp(`^${key}=.*$`, 'm'), `${key}=${value}`)
+  }
+
+  return `${key}=${value}\n${source}`
+}
+
+function updateEnvFile(source: string, authSecret: string, bootstrapAdminPassword?: string) {
+  let nextSource = upsertEnvValue(source, 'NUXT_AUTH_SECRET', authSecret)
+
+  if (bootstrapAdminPassword) {
+    nextSource = upsertEnvValue(
+      nextSource,
+      'NUXT_BOOTSTRAP_ADMIN_PASSWORD',
+      bootstrapAdminPassword
+    )
+  }
 
   return ensureTrailingNewline(nextSource)
 }
@@ -93,7 +110,7 @@ const existingAuthSecret = (existingEnv.match(/^NUXT_AUTH_SECRET=(.*)$/m)?.[1] |
 const authSecret =
   options.authSecret || existingAuthSecret || randomBytes(32).toString('hex')
 
-const nextEnv = updateEnvFile(existingEnv, authSecret)
+const nextEnv = updateEnvFile(existingEnv, authSecret, options.bootstrapAdminPassword)
 
 const wranglerSource = readFileSync(existsSync(wranglerPath) ? wranglerPath : wranglerExamplePath, 'utf8')
 const nextWrangler = [

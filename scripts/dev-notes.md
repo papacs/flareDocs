@@ -10,6 +10,14 @@
 
 ## Cloudflare path
 
+Recommended one-shot command:
+
+```bash
+pnpm deploy:pages:first -- --project-name=<your-pages-project-name> --d1-database-id=<your-d1-id> --r2-bucket=<your-r2-bucket> --r2-preview-bucket=<your-r2-preview-bucket>
+```
+
+Manual fallback:
+
 1. Create a D1 database with `pnpm wrangler d1 create flaredocs-db`
 2. Create an R2 bucket with `pnpm wrangler r2 bucket create <your-bucket>`
 3. Update local `wrangler.toml`, or pass values into `pnpm project:setup -- --d1-database-id=... --r2-bucket=...`

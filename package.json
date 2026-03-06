@@ -10,6 +10,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply flaredocs-db --local",
     "db:migrate:remote": "wrangler d1 migrations apply flaredocs-db --remote",
+    "deploy:pages:first": "node --experimental-strip-types scripts/deploy-pages-first.ts",
     "dev": "nuxt dev",
     "lint": "eslint app db *.ts *.mjs",
     "lint:fix": "eslint app db *.ts *.mjs --fix",
