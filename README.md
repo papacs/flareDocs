@@ -1,7 +1,7 @@
 # flareDocs
 
 <p align="left">
-  <img src="./logo.png" alt="flareDocs logo" width="360" />
+  <img src="./public/logo.png" alt="flareDocs logo" width="360" />
   <img src="./public/brand-icon.svg" alt="flareDocs icon" width="64" style="margin-left: 12px; vertical-align: middle;" />
 </p>
 

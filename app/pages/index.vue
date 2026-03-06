@@ -778,9 +778,9 @@ async function saveProfile() {
               v-if="canDeleteSpace(space)"
               type="button"
               class="fd-space-card-icon-action fd-space-card-icon-action-danger"
-              :title="t('index.deleteSpace')"
-              :aria-label="t('index.deleteSpace')"
-              @click="beginDeleteSpace(space.id)"
+              :title="`${t('index.deleteSpace')}（双击）`"
+              :aria-label="`${t('index.deleteSpace')}（双击）`"
+              @dblclick="beginDeleteSpace(space.id)"
             >
               <WorkspaceIcon name="delete" class="h-4 w-4" />
             </button>
