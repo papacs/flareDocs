@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type {
   ApiResponse,
-  AuthUser,
   DocumentDetail,
   DocumentTreeItem,
   SpaceDetail,
@@ -21,17 +20,10 @@ type MoveOption = {
   value: string
 }
 
-const { roleLabel, t, visibilityLabel } = useAppLocale()
+const { t } = useAppLocale()
 const route = useRoute()
 const router = useRouter()
 const requestHeaders = import.meta.server ? useRequestHeaders(['cookie']) : undefined
-const unauthenticatedUserResponse: ApiResponse<{ user: AuthUser }> = {
-  ok: false,
-  error: {
-    code: 'UNAUTHORIZED',
-    message: 'Not authenticated.'
-  }
-}
 
 const spaceId = computed(() => Number(route.params.spaceId))
 const treeStorageKey = computed(() => `fd-tree-expanded:${spaceId.value}`)
@@ -49,6 +41,7 @@ const isRenaming = ref(false)
 const isMovePanelOpen = ref(false)
 const isExportMenuOpen = ref(false)
 const isFullscreen = ref(false)
+const isMobileTreeOpen = ref(false)
 const conflictMessage = ref('')
 const expandedFolderIds = ref<number[]>([])
 const persistedExpandedFolderIds = ref<number[] | null>(null)
@@ -120,12 +113,6 @@ const draft = reactive({
   content: ''
 })
 
-const { data: meResponse } = await useAsyncData('workspace-auth-me', () =>
-  $fetch<ApiResponse<{ user: AuthUser }>>('/api/auth/me', {
-    headers: requestHeaders
-  }).catch(() => unauthenticatedUserResponse)
-)
-
 const { data: spaceResponse } = await useAsyncData(
   () => `workspace-space-${spaceId.value}`,
   () =>
@@ -150,7 +137,6 @@ const { data: treeResponse, refresh: refreshTree } = await useAsyncData(
     })
 )
 
-const currentUser = computed(() => (meResponse.value?.ok ? meResponse.value.data.user : null))
 const space = computed(() =>
   spaceResponse.value && spaceResponse.value.ok ? spaceResponse.value.data.space : null
 )
@@ -176,18 +162,7 @@ const canEdit = computed(() => {
   return role === 'admin' || role === 'editor'
 })
 
-const roleSummary = computed(() => {
-  if (!space.value?.myRole) {
-    return t('workspace.guestView')
-  }
-
-  return t('workspace.currentRole', {
-    role: roleLabel(space.value.myRole)
-  })
-})
-
 const isFileDocument = computed(() => Boolean(selectedDocument.value && !selectedDocument.value.isFolder))
-const currentUserInitial = computed(() => currentUser.value?.username.trim().charAt(0).toUpperCase() ?? '?')
 
 function formatTimestamp(value: number | null | undefined) {
   if (!value) {
@@ -213,6 +188,7 @@ async function handleSpaceChange(event: Event) {
     return
   }
 
+  isMobileTreeOpen.value = false
   await navigateTo(`/spaces/${nextSpaceId}`)
 }
 
@@ -279,6 +255,8 @@ const selectedPathNodes = computed(() => {
 
   return path
 })
+
+const breadcrumbNodes = computed(() => selectedPathNodes.value.slice(0, -1))
 
 const selectedAncestorIds = computed(() => {
   const ancestors = new Set<number>()
@@ -532,6 +510,7 @@ onMounted(() => {
   }
 
   document.addEventListener('fullscreenchange', syncFullscreenState)
+  window.addEventListener('keydown', handleWindowKeydown)
   nextTick(() => updateReadingProgress())
 })
 
@@ -541,7 +520,14 @@ onBeforeUnmount(() => {
   }
 
   document.removeEventListener('fullscreenchange', syncFullscreenState)
+  window.removeEventListener('keydown', handleWindowKeydown)
 })
+
+function handleWindowKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape' && isMobileTreeOpen.value) {
+    isMobileTreeOpen.value = false
+  }
+}
 
 function syncDraft() {
   draft.title = selectedDocument.value?.title ?? ''
@@ -589,12 +575,14 @@ function toggleFolder(nodeId: number) {
 
 function selectNode(node: TreeNode | DocumentTreeItem) {
   if (selectedDocumentId.value === node.id) {
+    isMobileTreeOpen.value = false
     void loadDocument(node.id)
     return
   }
 
   selectedDocumentId.value = node.id
   expandDocumentPath(node.id)
+  isMobileTreeOpen.value = false
 }
 
 function startEdit() {
@@ -839,6 +827,10 @@ async function toggleFullscreen() {
     return
   }
 
+  isMobileTreeOpen.value = false
+  isMovePanelOpen.value = false
+  isExportMenuOpen.value = false
+
   if (document.fullscreenElement === documentPanelRef.value) {
     await document.exitFullscreen()
     return
@@ -915,65 +907,54 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
 
 <template>
   <main class="fd-workspace-shell mx-auto box-border flex w-full max-w-7xl flex-col gap-4 overflow-hidden px-4 py-4 sm:px-6 lg:px-8">
-    <header class="fd-workspace-topbar">
-      <div class="fd-workspace-topbar-main">
-        <div class="fd-workspace-switch-group">
-          <span class="fd-workspace-kicker">{{ t('workspace.kicker') }}</span>
-          <div class="fd-workspace-switch-shell">
-            <select
-              class="fd-workspace-switch"
-              :value="String(spaceId)"
-              :aria-label="t('workspace.space')"
-              @change="handleSpaceChange"
-            >
-              <option
-                v-for="workspace in spaces"
-                :key="workspace.id"
-                :value="workspace.id"
-              >
-                {{ workspace.name }}
-              </option>
-              <option
-                v-if="space && !isCurrentSpaceInList"
-                :value="space.id"
-              >
-                {{ space.name }}
-              </option>
-            </select>
-          </div>
-        </div>
-
-        <div class="fd-workspace-topbar-meta">
-          <span class="fd-topbar-pill">{{ visibilityLabel(space?.visibility) }}</span>
-          <span class="fd-topbar-pill">{{ roleSummary }}</span>
-          <NuxtLink
-            v-if="space?.myRole === 'admin'"
-            class="fd-topbar-icon"
-            :to="`/spaces/${spaceId}/audit`"
-            :title="t('workspace.audit')"
-          >
-            <WorkspaceIcon name="audit" class="h-4 w-4" />
-          </NuxtLink>
-          <NuxtLink class="fd-topbar-icon" to="/" :title="t('common.home')">
-            <WorkspaceIcon name="home" class="h-4 w-4" />
-          </NuxtLink>
-          <div
-            class="fd-user-avatar"
-            :title="currentUser ? t('workspace.signedInAs', { username: currentUser.username }) : t('workspace.guestView')"
-          >
-            {{ currentUserInitial }}
-          </div>
-        </div>
-      </div>
-    </header>
-
     <p v-if="workspaceError" class="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">
       {{ workspaceError }}
     </p>
 
     <div class="grid min-h-0 flex-1 gap-4 xl:grid-cols-[23rem_minmax(0,1fr)]">
-      <aside class="fd-tree-shell overflow-hidden">
-        <div class="flex items-center justify-between gap-3">
+      <aside
+        class="fd-tree-shell fd-tree-shell-mobile order-2 overflow-hidden xl:order-1"
+        :class="{ 'fd-tree-shell-mobile-open': isMobileTreeOpen }"
+      >
+        <div class="fd-tree-workspace">
+          <div class="fd-tree-workspace-row">
+            <div class="fd-workspace-switch-shell">
+              <select
+                class="fd-workspace-switch"
+                :value="String(spaceId)"
+                :aria-label="t('workspace.space')"
+                @change="handleSpaceChange"
+              >
+                <option
+                  v-for="workspace in spaces"
+                  :key="workspace.id"
+                  :value="workspace.id"
+                >
+                  {{ workspace.name }}
+                </option>
+                <option
+                  v-if="space && !isCurrentSpaceInList"
+                  :value="space.id"
+                >
+                  {{ space.name }}
+                </option>
+              </select>
+            </div>
+            <NuxtLink class="fd-workspace-home" to="/" :title="t('common.home')">
+              <WorkspaceIcon name="home" class="h-4 w-4" />
+            </NuxtLink>
+            <button
+              type="button"
+              class="fd-mobile-tree-close xl:hidden"
+              @click="isMobileTreeOpen = false"
+            >
+              <WorkspaceIcon name="close" class="h-4 w-4" />
+              <span>关闭</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="fd-tree-heading">
           <div>
             <p class="text-xs uppercase tracking-[0.24em] text-slate-500">{{ t('workspace.tree') }}</p>
             <h2 class="mt-2 text-xl font-semibold text-slate-800">{{ t('workspace.documents') }}</h2>
@@ -1103,15 +1084,27 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
 
       <section
         ref="documentPanelRef"
-        class="fd-document-panel flex min-h-0 flex-col overflow-hidden rounded-[2rem] border border-[rgba(31,41,55,0.1)] p-4 shadow-[0_26px_52px_rgba(31,41,55,0.08)] sm:p-5"
+        class="fd-document-panel order-1 flex min-h-0 flex-col overflow-hidden rounded-[2rem] border border-[rgba(31,41,55,0.1)] p-4 shadow-[0_26px_52px_rgba(31,41,55,0.08)] sm:p-5 xl:order-2"
       >
+        <div class="fd-mobile-tree-trigger-wrap mb-3 flex justify-end xl:hidden">
+          <button
+            v-if="!isMobileTreeOpen"
+            type="button"
+            class="fd-mobile-tree-trigger"
+            @click="isMobileTreeOpen = true"
+          >
+            <WorkspaceIcon name="folder-open" class="h-4 w-4" />
+            <span>目录</span>
+          </button>
+        </div>
+
         <template v-if="selectedDocument">
           <div class="fd-doc-header">
             <div class="min-w-0 flex-1">
-              <div v-if="selectedPathNodes.length" class="fd-tree-breadcrumbs mb-2">
+              <div v-if="breadcrumbNodes.length" class="fd-tree-breadcrumbs mb-2">
                 <span class="fd-tree-context-label mr-1">{{ t('workspace.currentPath') }}</span>
                 <button
-                  v-for="pathNode in selectedPathNodes"
+                  v-for="pathNode in breadcrumbNodes"
                   :key="`content-${pathNode.id}`"
                   type="button"
                   class="fd-tree-crumb"
@@ -1216,7 +1209,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
             </div>
           </div>
 
-          <div v-if="isMovePanelOpen && canEdit" class="mt-4 shrink-0 rounded-[1.6rem] bg-[rgba(244,238,229,0.72)] p-4 sm:p-5">
+          <div v-if="isMovePanelOpen && canEdit" class="fd-move-panel mt-4 shrink-0 rounded-[1.6rem] bg-[rgba(244,238,229,0.72)] p-4 sm:p-5">
             <div class="flex flex-col gap-3 lg:flex-row lg:items-end">
               <div class="flex-1">
                 <p class="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">
@@ -1247,7 +1240,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
             </p>
           </div>
 
-          <p v-if="conflictMessage" class="mt-4 shrink-0 rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
+          <p v-if="conflictMessage" class="fd-conflict-note mt-4 shrink-0 rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
             {{ conflictMessage }}
           </p>
 
@@ -1303,5 +1296,13 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
         </div>
       </section>
     </div>
+
+    <button
+      v-if="isMobileTreeOpen"
+      type="button"
+      class="fd-mobile-tree-backdrop xl:hidden"
+      aria-label="关闭目录面板"
+      @click="isMobileTreeOpen = false"
+    />
   </main>
 </template>

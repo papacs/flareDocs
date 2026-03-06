@@ -188,6 +188,17 @@ Date: 2026-03-05
 - Expanded admin account operations in [app/server/api/admin/users/[userId].patch.ts](/mnt/e/workspace/flareDocs/app/server/api/admin/users/[userId].patch.ts) and [app/server/api/admin/users/[userId].delete.ts](/mnt/e/workspace/flareDocs/app/server/api/admin/users/[userId].delete.ts): enable/disable, grant/revoke admin, reset password, delete, and last-active-admin guard
 - Refined [users.vue](/mnt/e/workspace/flareDocs/app/pages/admin/users.vue) with icon-based home navigation and per-user operation controls, and upgraded avatar presentation to QQ-classic-style preset icons in [index.vue](/mnt/e/workspace/flareDocs/app/pages/index.vue) and [avatar-presets.ts](/mnt/e/workspace/flareDocs/app/utils/avatar-presets.ts)
 
+Date: 2026-03-06
+
+- Simplified the workspace chrome in [spaces/[spaceId].vue](/mnt/e/workspace/flareDocs/app/pages/spaces/[spaceId].vue) by removing the top strip and moving the workspace switcher plus home entry into the left sidebar
+- Added sidebar-specific workspace controls styling in [main.css](/mnt/e/workspace/flareDocs/app/assets/css/main.css) to preserve compact spacing and keep role/visibility badges readable
+- Updated [README.md](/mnt/e/workspace/flareDocs/README.md) with the latest workspace layout adjustment note
+- Further reduced left-sidebar workspace controls to only the space dropdown plus home icon in [spaces/[spaceId].vue](/mnt/e/workspace/flareDocs/app/pages/spaces/[spaceId].vue), removing audit/avatar/role-visibility pills from the workspace view
+- Refined sidebar visuals in [main.css](/mnt/e/workspace/flareDocs/app/assets/css/main.css) with a cleaner header card, softer layered background, and a dedicated tree heading divider
+- Removed duplicate current-document crumbs from the workspace path display in [spaces/[spaceId].vue](/mnt/e/workspace/flareDocs/app/pages/spaces/[spaceId].vue) so the document title is shown only once
+- Added mobile workspace compatibility in [spaces/[spaceId].vue](/mnt/e/workspace/flareDocs/app/pages/spaces/[spaceId].vue) and [main.css](/mnt/e/workspace/flareDocs/app/assets/css/main.css): right-top directory trigger, slide-in tree drawer, backdrop click close, and `Esc` close behavior
+- Added mobile fullscreen compact mode in [main.css](/mnt/e/workspace/flareDocs/app/assets/css/main.css) and [spaces/[spaceId].vue](/mnt/e/workspace/flareDocs/app/pages/spaces/[spaceId].vue): hide top metadata blocks, keep a single action-button row, and reclaim vertical reading space
+
 ## In Progress
 
 None.
@@ -248,3 +259,7 @@ After each implementation step:
 - Added admin-only account management and stricter space-member constraints (personal workspace lock + last admin guard).
 - Added full admin account lifecycle operations (enable/disable/delete/reset password/set admin) with backend safety checks.
 - Refined homepage guest-mode layout in [index.vue](/mnt/e/workspace/flareDocs/app/pages/index.vue) by adding a full quick-start guidance card and public-space shortcut to remove the large empty area when not logged in.
+- Removed the workspace top strip and moved the workspace selector plus home action into the left sidebar to free vertical space for document content.
+- Simplified workspace sidebar controls again so the top area shows only the workspace selector and home icon, with cleaner left-panel visual hierarchy.
+- Improved workspace mobile usability with a right-top drawer trigger for the tree panel, and removed duplicate current-path label content above the document title.
+- Added a mobile fullscreen "button-row only" presentation so header text and auxiliary panels stop consuming vertical space while reading.
