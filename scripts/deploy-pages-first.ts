@@ -190,10 +190,6 @@ assertOption(options.projectName, '--project-name')
 const bootstrapAdminPassword =
   options.bootstrapAdminPassword || process.env.NUXT_BOOTSTRAP_ADMIN_PASSWORD || generateAdminPassword()
 
-if (bootstrapAdminPassword.length < 12) {
-  throw new Error('`--bootstrap-admin-password` must be at least 12 characters.')
-}
-
 if (!options.skipSetup) {
   const setupArgs = ['project:setup', '--']
 

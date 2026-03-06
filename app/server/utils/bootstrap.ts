@@ -14,10 +14,6 @@ export async function ensureDefaultAdmin(event: H3Event) {
     return null
   }
 
-  if (bootstrapPassword.length < 12) {
-    throw new Error('NUXT_BOOTSTRAP_ADMIN_PASSWORD must be at least 12 characters.')
-  }
-
   const db = getDb(event)
   const [existingAdmin] = await db
     .select({

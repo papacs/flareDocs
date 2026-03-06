@@ -182,7 +182,7 @@ cp wrangler.toml.example wrangler.toml
 
 ```env
 NUXT_AUTH_SECRET=replace-with-a-long-random-secret
-# 仅首次初始化管理员时需要，长度至少 12 位
+# 仅首次初始化管理员时需要
 NUXT_BOOTSTRAP_ADMIN_PASSWORD=replace-with-a-strong-password
 ```
 
