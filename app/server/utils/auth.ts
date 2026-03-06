@@ -21,7 +21,13 @@ type AuthTokenPayload = {
 }
 
 function getAuthSecret(event: H3Event) {
-  const secret = useRuntimeConfig(event).authSecret
+  const rawSecret = useRuntimeConfig(event).authSecret
+  const secret =
+    typeof rawSecret === 'string'
+      ? rawSecret
+      : rawSecret === null || rawSecret === undefined
+        ? ''
+        : String(rawSecret)
 
   if (!secret) {
     throw new Error('Missing runtime config `authSecret`.')

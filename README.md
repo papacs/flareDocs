@@ -295,15 +295,15 @@ pnpm project:setup
 
 ## Cloudflare 部署准备
 
-### 完整首次部署步骤
+### A. 首次部署（推荐）
 
-1. 登录 Wrangler
+1. 登录 Cloudflare
 
 ```bash
 pnpm wrangler login
 ```
 
-2. 创建云端资源（第一次需要）
+2. 第一次创建云端资源（D1 + R2）
 
 ```bash
 pnpm wrangler d1 create flaredocs-db
@@ -311,32 +311,57 @@ pnpm wrangler r2 bucket create flaredocs-assets-prod
 pnpm wrangler r2 bucket create flaredocs-assets-preview
 ```
 
-3. 执行一键首次部署（推荐）
+3. 执行一键首次部署脚本
 
 ```bash
 pnpm deploy:pages:first -- --project-name=<your-pages-project-name> --d1-database-id=<your-d1-id> --r2-bucket=<your-r2-bucket> --r2-preview-bucket=<your-r2-preview-bucket>
 ```
 
-脚本会自动执行：
-- `project:setup`（生成/更新 `.env`、`wrangler.toml`）
-- `wrangler whoami`（失败仅警告，不中断）
-- 创建 Pages 项目
-- 写入 Pages secrets：`NUXT_AUTH_SECRET`、`NUXT_BOOTSTRAP_ADMIN_PASSWORD`
-- `db:migrate:remote`
-- `build`
-- `wrangler pages deploy dist`
+说明（脚本内自动完成）：
+- 生成/更新 `.env` 和 `wrangler.toml`
+- 创建 Pages 项目（如不存在）
+- 设置 Pages Secrets：`NUXT_AUTH_SECRET`、`NUXT_BOOTSTRAP_ADMIN_PASSWORD`
+- 应用远程 migration：`pnpm db:migrate:remote`
+- 打包并发布：`pnpm build` + `wrangler pages deploy dist`
 
-4. 首次登录
-- 用户名固定：`admin`
-- 密码：部署脚本末尾输出的初始密码
-- 首登后请立即修改密码，并在 Pages Secrets 中移除 `NUXT_BOOTSTRAP_ADMIN_PASSWORD`
+4. 首次管理员登录
+- 账号：`admin`
+- 密码：部署脚本末尾输出的初始密码（或你手动设置的 `NUXT_BOOTSTRAP_ADMIN_PASSWORD`）
+- 登录后请尽快修改密码
 
-### 参数说明（deploy:pages:first）
+### B. 后续发布（非首次）
+
+代码更新后，手动发布最短流程：
+
+```bash
+pnpm build
+pnpm wrangler pages deploy dist --project-name=<your-pages-project-name> --branch main --commit-dirty=true
+```
+
+注：
+- `dist` 是发布目录，不存在就会报 `ENOENT: .../dist`
+- 在 Windows PowerShell 下建议用单行命令，不要用 `\` 续行
+
+### C. 接 Git 自动部署（推送即部署）
+
+在 Cloudflare Dashboard 配置：
+1. `Workers & Pages -> 项目 -> Settings -> Builds & deployments`
+2. `Connect to Git`，选择仓库和生产分支（例如 `main`）
+3. Build command：`pnpm build`
+4. Build output：`dist`
+5. 在 `Settings -> Variables and Secrets` 配置 secrets
+6. 在 `Settings -> Bindings` 配置：
+- D1 绑定名：`DB`
+- R2 绑定名：`R2_ASSETS`
+
+完成后，推送到生产分支会自动触发部署。
+
+### D. 参数说明（deploy:pages:first）
 
 - `--project-name=<name>`：必填，Pages 项目名
-- `--d1-database-id=<id>`：建议首次部署时填写
-- `--r2-bucket=<bucket>`：生产桶名
-- `--r2-preview-bucket=<bucket>`：预览桶名（可与生产同名，但不推荐）
+- `--d1-database-id=<id>`：首次部署建议填写
+- `--r2-bucket=<bucket>`：生产桶
+- `--r2-preview-bucket=<bucket>`：预览桶
 - `--auth-secret=<secret>`：可选，不传则自动生成
 - `--bootstrap-admin-password=<password>`：可选，不传则自动生成
 - `--production-branch=<branch>`：默认 `main`
@@ -344,24 +369,62 @@ pnpm deploy:pages:first -- --project-name=<your-pages-project-name> --d1-databas
 - `--skip-project-create`：跳过 Pages 项目创建
 - `--skip-migrate`：跳过远程 migration
 - `--skip-build`：跳过构建
-- `--dry-run`：只打印流程，不执行
+- `--dry-run`：仅打印步骤
 
-### 常见部署问题
+### E. 部署与登录调试（实战排错清单）
 
-1. `Failed to create Pages project`
-- 常见原因：项目已存在，或当前 Cloudflare 账号无权限
-- 处理：
+1. 先看函数实时日志（推荐）
+
+```bash
+pnpm wrangler pages deployment tail --project-name <your-pages-project-name>
+```
+
+保持命令运行状态，然后在浏览器重试登录或验证码操作，终端会出现真实堆栈。
+
+2. 健康检查接口
+
+```text
+https://<your-pages-project-name>.pages.dev/api/health/db
+```
+
+返回 `{"ok":true,...}` 代表 D1 绑定和连接正常。
+
+3. 高频错误与处理
+
+- `522 Connection timed out`
+  - 含义：Host 侧不可用（常见于发布异常）
+  - 处理：重新 `build + deploy`，必要时换新项目名重建
+
+- `ENOENT .../dist`
+  - 含义：没先构建就部署
+  - 处理：先执行 `pnpm build`
+
+- `/api/auth/captcha` 或 `/api/auth/login` 500
+  - 优先检查 Secrets 是否存在：
+    - `NUXT_AUTH_SECRET`
+    - `NUXT_BOOTSTRAP_ADMIN_PASSWORD`（仅首次初始化管理员必需）
+  - 检查 Bindings：
+    - D1: `DB`
+    - R2: `R2_ASSETS`
+
+- `Failed to create Pages project`
+  - 常见原因：项目已存在或账号无权限
+  - 处理：
 
 ```bash
 pnpm wrangler pages project list
 pnpm deploy:pages:first -- --project-name=<your-pages-project-name> --skip-setup --skip-project-create
 ```
 
-2. PowerShell 多行命令异常
-- 建议用单行命令执行；不要用 `\` 当续行符（PowerShell 续行建议用反引号）
+- `Pbkdf2 failed: iteration counts above 100000 are not supported`
+  - 含义：运行时不支持更高迭代次数
+  - 当前项目已修复为兼容值，重新部署最新代码即可
 
-3. `wrangler whoami` 失败但已登录
-- 脚本已处理为警告并继续；最终以 `pages deploy` 是否成功为准
+4. PowerShell 日志查看
+
+```powershell
+Get-Content "C:\Users\<your-user>\AppData\Roaming\xdg.config\.wrangler\logs\<log-file>.log"
+```
 
 ## 关键实现说明
 

@@ -1,5 +1,5 @@
 const HASH_PREFIX = 'pbkdf2_sha256'
-const HASH_ITERATIONS = 310_000
+const HASH_ITERATIONS = 100_000
 const SALT_BYTES = 16
 const KEY_LENGTH = 32
 
@@ -82,25 +82,29 @@ export async function hashPassword(password: string) {
 }
 
 export async function verifyPassword(password: string, storedHash: string) {
-  const [algorithm, iterationsRaw, saltRaw, digestRaw] = storedHash.split('$')
+  try {
+    const [algorithm, iterationsRaw, saltRaw, digestRaw] = storedHash.split('$')
 
-  if (!algorithm || !iterationsRaw || !saltRaw || !digestRaw) {
+    if (!algorithm || !iterationsRaw || !saltRaw || !digestRaw) {
+      return false
+    }
+
+    if (algorithm !== HASH_PREFIX) {
+      return false
+    }
+
+    const iterations = Number(iterationsRaw)
+
+    if (!Number.isInteger(iterations) || iterations <= 0 || iterations > 100_000) {
+      return false
+    }
+
+    const salt = base64UrlToBytes(saltRaw)
+    const expectedDigest = base64UrlToBytes(digestRaw)
+    const actualDigest = await derivePasswordBits(password, salt, iterations)
+
+    return timingSafeEqual(actualDigest, expectedDigest)
+  } catch {
     return false
   }
-
-  if (algorithm !== HASH_PREFIX) {
-    return false
-  }
-
-  const iterations = Number(iterationsRaw)
-
-  if (!Number.isInteger(iterations) || iterations <= 0) {
-    return false
-  }
-
-  const salt = base64UrlToBytes(saltRaw)
-  const expectedDigest = base64UrlToBytes(digestRaw)
-  const actualDigest = await derivePasswordBits(password, salt, iterations)
-
-  return timingSafeEqual(actualDigest, expectedDigest)
 }

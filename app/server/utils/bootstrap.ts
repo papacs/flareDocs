@@ -8,7 +8,13 @@ import { hashPassword } from './password'
 import { ensurePersonalWorkspace } from './spaces'
 
 export async function ensureDefaultAdmin(event: H3Event) {
-  const bootstrapPassword = useRuntimeConfig(event).bootstrapAdminPassword?.trim() ?? ''
+  const rawBootstrapPassword = useRuntimeConfig(event).bootstrapAdminPassword
+  const bootstrapPassword =
+    typeof rawBootstrapPassword === 'string'
+      ? rawBootstrapPassword.trim()
+      : rawBootstrapPassword === null || rawBootstrapPassword === undefined
+        ? ''
+        : String(rawBootstrapPassword).trim()
 
   if (!bootstrapPassword) {
     return null

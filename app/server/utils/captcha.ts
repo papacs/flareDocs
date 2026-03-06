@@ -17,7 +17,13 @@ type CaptchaTokenPayload = {
 const usedCaptchaChallenges = new Map<string, number>()
 
 function getCaptchaSecret(event: H3Event) {
-  const secret = useRuntimeConfig(event).authSecret
+  const rawSecret = useRuntimeConfig(event).authSecret
+  const secret =
+    typeof rawSecret === 'string'
+      ? rawSecret
+      : rawSecret === null || rawSecret === undefined
+        ? ''
+        : String(rawSecret)
 
   if (!secret) {
     throw new Error('Missing runtime config `authSecret`.')
@@ -27,7 +33,13 @@ function getCaptchaSecret(event: H3Event) {
 }
 
 function getCaptchaSecretText(event: H3Event) {
-  const secret = useRuntimeConfig(event).authSecret
+  const rawSecret = useRuntimeConfig(event).authSecret
+  const secret =
+    typeof rawSecret === 'string'
+      ? rawSecret
+      : rawSecret === null || rawSecret === undefined
+        ? ''
+        : String(rawSecret)
 
   if (!secret) {
     throw new Error('Missing runtime config `authSecret`.')
