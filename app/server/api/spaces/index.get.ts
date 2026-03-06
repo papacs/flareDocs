@@ -16,6 +16,7 @@ export default defineEventHandler(async (event) => {
       name: spaces.name,
       slug: spaces.slug,
       visibility: spaces.visibility,
+      createdBy: spaces.createdBy,
       createdAt: spaces.createdAt
     })
     .from(spaces)
@@ -56,6 +57,7 @@ export default defineEventHandler(async (event) => {
       name: string
       slug: string
       visibility: 'private' | 'team' | 'public'
+      createdBy: number | null
       createdAt: number
       isPersonal: boolean
       myRole: 'admin' | 'editor' | 'viewer' | null

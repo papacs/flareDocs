@@ -46,3 +46,9 @@ export function buildAssetUrl(event: H3Event, key: string) {
   const requestUrl = getRequestURL(event)
   return `${requestUrl.origin}/uploads/${key}`
 }
+
+const ASSET_KEY_PATTERN = /^\d+\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(avif|gif|jpg|png|webp)$/
+
+export function isValidAssetKey(key: string) {
+  return ASSET_KEY_PATTERN.test(key)
+}

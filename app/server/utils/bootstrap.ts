@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
 import type { H3Event } from 'h3'
+import { useRuntimeConfig } from '#imports'
 
 import { users } from '../../../db/schema'
 import { getDb } from './db'
@@ -7,6 +8,16 @@ import { hashPassword } from './password'
 import { ensurePersonalWorkspace } from './spaces'
 
 export async function ensureDefaultAdmin(event: H3Event) {
+  const bootstrapPassword = useRuntimeConfig(event).bootstrapAdminPassword?.trim() ?? ''
+
+  if (!bootstrapPassword) {
+    return null
+  }
+
+  if (bootstrapPassword.length < 12) {
+    throw new Error('NUXT_BOOTSTRAP_ADMIN_PASSWORD must be at least 12 characters.')
+  }
+
   const db = getDb(event)
   const [existingAdmin] = await db
     .select({
@@ -22,23 +33,10 @@ export async function ensureDefaultAdmin(event: H3Event) {
     .limit(1)
 
   if (existingAdmin) {
-    if (!existingAdmin.isSystemAdmin || !existingAdmin.isActive) {
-      await db
-        .update(users)
-        .set({ isSystemAdmin: true, isActive: true })
-        .where(eq(users.id, existingAdmin.id))
-
-      return {
-        ...existingAdmin,
-        isSystemAdmin: true,
-        isActive: true
-      }
-    }
-
     return existingAdmin
   }
 
-  const passwordHash = await hashPassword('admin')
+  const passwordHash = await hashPassword(bootstrapPassword)
   await db
     .insert(users)
     .values({

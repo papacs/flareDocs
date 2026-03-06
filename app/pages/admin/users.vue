@@ -280,9 +280,9 @@ async function deleteUser(userItem: AdminUser) {
 <template>
   <main
     v-if="canShowAdminPage"
-    class="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-5 bg-[radial-gradient(circle_at_top,rgba(248,242,231,0.92),transparent_40%),linear-gradient(180deg,#f6f1e8_0%,#f4efe6_100%)] px-4 py-4 sm:px-6 lg:px-8"
+    class="fd-admin-shell mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-5 bg-[radial-gradient(circle_at_top,rgba(248,242,231,0.92),transparent_40%),linear-gradient(180deg,#f6f1e8_0%,#f4efe6_100%)] px-4 py-4 sm:px-6 lg:px-8"
   >
-    <header class="rounded-3xl border border-[rgba(31,41,55,0.1)] bg-white/80 p-5 shadow-[0_16px_36px_rgba(120,98,69,0.1)]">
+    <header class="fd-admin-card rounded-3xl border border-[rgba(31,41,55,0.1)] bg-white/80 p-5 shadow-[0_16px_36px_rgba(120,98,69,0.1)]">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p class="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">{{ t('adminUsers.kicker') }}</p>
@@ -296,7 +296,7 @@ async function deleteUser(userItem: AdminUser) {
     </header>
 
     <section class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
-      <article class="rounded-3xl border border-[rgba(31,41,55,0.1)] bg-white/80 p-5 shadow-[0_14px_32px_rgba(120,98,69,0.1)]">
+      <article class="fd-admin-card rounded-3xl border border-[rgba(31,41,55,0.1)] bg-white/80 p-5 shadow-[0_14px_32px_rgba(120,98,69,0.1)]">
         <h2 class="text-xl font-semibold text-slate-800">{{ t('adminUsers.createTitle') }}</h2>
         <p class="mt-2 text-sm leading-6 text-slate-500">{{ t('adminUsers.createHint') }}</p>
 
@@ -343,7 +343,7 @@ async function deleteUser(userItem: AdminUser) {
         </form>
       </article>
 
-      <article class="rounded-3xl border border-[rgba(31,41,55,0.1)] bg-white/80 p-5 shadow-[0_14px_32px_rgba(120,98,69,0.1)]">
+      <article class="fd-admin-card rounded-3xl border border-[rgba(31,41,55,0.1)] bg-white/80 p-5 shadow-[0_14px_32px_rgba(120,98,69,0.1)]">
         <h2 class="text-xl font-semibold text-slate-800">{{ t('adminUsers.listTitle') }}</h2>
 
         <p v-if="usersError" class="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-600">{{ usersError }}</p>
@@ -354,7 +354,7 @@ async function deleteUser(userItem: AdminUser) {
           <li
             v-for="userItem in users"
             :key="userItem.id"
-            class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[rgba(31,41,55,0.08)] px-3 py-2"
+            class="fd-admin-user-row flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[rgba(31,41,55,0.08)] px-3 py-2"
             :class="userItem.isActive ? 'bg-[rgba(250,247,241,0.9)]' : 'bg-[rgba(241,238,232,0.86)] opacity-75'"
           >
             <div class="flex min-w-0 items-center gap-3">

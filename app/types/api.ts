@@ -28,6 +28,7 @@ export type SpaceSummary = {
   name: string
   slug: string
   visibility: 'private' | 'team' | 'public'
+  createdBy: number | null
   createdAt: number
   isPersonal: boolean
   myRole: 'admin' | 'editor' | 'viewer' | null

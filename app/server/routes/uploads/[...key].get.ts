@@ -1,6 +1,6 @@
 import { createError, getRouterParam, setHeader } from 'h3'
 
-import { getAssetBucket } from '../../utils/storage'
+import { getAssetBucket, isValidAssetKey } from '../../utils/storage'
 
 export default defineEventHandler(async (event) => {
   const rawKey = getRouterParam(event, 'key')
@@ -13,6 +13,14 @@ export default defineEventHandler(async (event) => {
   }
 
   const key = Array.isArray(rawKey) ? rawKey.join('/') : rawKey
+
+  if (!isValidAssetKey(key)) {
+    throw createError({
+      statusCode: 404,
+      statusMessage: 'Asset was not found.'
+    })
+  }
+
   const object = await getAssetBucket(event).get(key)
 
   if (!object || !object.body) {

@@ -24,6 +24,7 @@ const { t } = useAppLocale()
 const route = useRoute()
 const router = useRouter()
 const requestHeaders = import.meta.server ? useRequestHeaders(['cookie']) : undefined
+const recentSpaceStorageKey = 'fd-recent-space-id'
 
 const spaceId = computed(() => Number(route.params.spaceId))
 const treeStorageKey = computed(() => `fd-tree-expanded:${spaceId.value}`)
@@ -143,13 +144,6 @@ const space = computed(() =>
 const spaces = computed(() =>
   spacesResponse.value && spacesResponse.value.ok ? spacesResponse.value.data.spaces : []
 )
-const isCurrentSpaceInList = computed(() => {
-  if (!space.value) {
-    return false
-  }
-
-  return spaces.value.some((workspace) => workspace.id === space.value?.id)
-})
 const treeItems = computed(() =>
   treeResponse.value && treeResponse.value.ok ? treeResponse.value.data.documents : []
 )
@@ -180,9 +174,29 @@ function formatTimestamp(value: number | null | undefined) {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
 }
 
-async function handleSpaceChange(event: Event) {
-  const target = event.target as HTMLSelectElement | null
-  const nextSpaceId = Number(target?.value ?? '')
+const isSpaceMenuOpen = ref(false)
+const workspaceOptions = computed(() => {
+  const knownIds = new Set<number>()
+  const options: Array<{ id: number; name: string }> = []
+
+  for (const workspace of spaces.value) {
+    knownIds.add(workspace.id)
+    options.push({ id: workspace.id, name: workspace.name })
+  }
+
+  if (space.value && !knownIds.has(space.value.id)) {
+    options.push({ id: space.value.id, name: space.value.name })
+  }
+
+  return options
+})
+
+const currentWorkspaceName = computed(
+  () => workspaceOptions.value.find((workspace) => workspace.id === spaceId.value)?.name ?? ''
+)
+
+async function selectWorkspace(nextSpaceId: number) {
+  isSpaceMenuOpen.value = false
 
   if (!nextSpaceId || nextSpaceId === spaceId.value) {
     return
@@ -359,6 +373,14 @@ const moveOptions = computed<MoveOption[]>(() => {
   return options
 })
 
+const moveSelectOptions = computed(() =>
+  moveOptions.value.map((option) => ({
+    value: option.value,
+    label: `${'　'.repeat(option.depth)}${option.label}`,
+    disabled: option.disabled
+  }))
+)
+
 function restoreExpandedFolders() {
   if (!import.meta.client) {
     return
@@ -431,6 +453,19 @@ watch(
   },
   { deep: true }
 )
+
+watch(
+  spaceId,
+  (nextSpaceId) => {
+    if (!import.meta.client || !Number.isInteger(nextSpaceId) || nextSpaceId <= 0) {
+      return
+    }
+
+    window.localStorage.setItem(recentSpaceStorageKey, String(nextSpaceId))
+  },
+  { immediate: true }
+)
+
 
 watch(
   treeItems,
@@ -524,6 +559,10 @@ onBeforeUnmount(() => {
 })
 
 function handleWindowKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape' && isSpaceMenuOpen.value) {
+    isSpaceMenuOpen.value = false
+  }
+
   if (event.key === 'Escape' && isMobileTreeOpen.value) {
     isMobileTreeOpen.value = false
   }
@@ -919,29 +958,37 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
         <div class="fd-tree-workspace">
           <div class="fd-tree-workspace-row">
             <div class="fd-workspace-switch-shell">
-              <select
-                class="fd-workspace-switch"
-                :value="String(spaceId)"
+              <button
+                type="button"
+                class="fd-workspace-switch fd-workspace-switch-button"
                 :aria-label="t('workspace.space')"
-                @change="handleSpaceChange"
+                :aria-expanded="isSpaceMenuOpen ? 'true' : 'false'"
+                @click="isSpaceMenuOpen = !isSpaceMenuOpen"
               >
-                <option
-                  v-for="workspace in spaces"
+                <span class="truncate">{{ currentWorkspaceName }}</span>
+              </button>
+              <button
+                v-if="isSpaceMenuOpen"
+                type="button"
+                class="fd-workspace-switch-backdrop"
+                aria-label="关闭空间菜单"
+                @click="isSpaceMenuOpen = false"
+              />
+              <div v-if="isSpaceMenuOpen" class="fd-workspace-switch-menu">
+                <button
+                  v-for="workspace in workspaceOptions"
                   :key="workspace.id"
-                  :value="workspace.id"
+                  type="button"
+                  class="fd-workspace-switch-option"
+                  :class="workspace.id === spaceId ? 'fd-workspace-switch-option-active' : ''"
+                  @click="selectWorkspace(workspace.id)"
                 >
                   {{ workspace.name }}
-                </option>
-                <option
-                  v-if="space && !isCurrentSpaceInList"
-                  :value="space.id"
-                >
-                  {{ space.name }}
-                </option>
-              </select>
+                </button>
+              </div>
             </div>
             <NuxtLink class="fd-workspace-home" to="/" :title="t('common.home')">
-              <WorkspaceIcon name="home" class="h-4 w-4" />
+              <BrandMark size="sm" :show-name="false" />
             </NuxtLink>
             <button
               type="button"
@@ -1215,16 +1262,12 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
                 <p class="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">
                   {{ t('workspace.moveTarget') }}
                 </p>
-                <select v-model="moveTargetParentId" class="fd-workspace-select mt-2">
-                  <option
-                    v-for="option in moveOptions"
-                    :key="option.value"
-                    :value="option.value"
-                    :disabled="option.disabled"
-                  >
-                    {{ `${'　'.repeat(option.depth)}${option.label}` }}
-                  </option>
-                </select>
+                <AppSelectMenu
+                  v-model="moveTargetParentId"
+                  class="mt-2"
+                  :options="moveSelectOptions"
+                  :aria-label="t('workspace.moveTarget')"
+                />
               </div>
               <div class="flex flex-wrap gap-2">
                 <UButton color="neutral" :loading="movePending" @click="moveDocument">
@@ -1273,7 +1316,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
                 >
                   <div class="fd-reading-progress-fill" :style="{ height: `${readingProgress}%` }" />
                 </button>
-                <span class="fd-reading-progress-label">{{ Math.round(readingProgress) }}%</span>
+                <span v-if="readingProgress > 0" class="fd-reading-progress-label">{{ Math.round(readingProgress) }}%</span>
               </div>
               <div
                 ref="documentScrollRef"
@@ -1290,7 +1333,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
 
         <div
           v-else
-          class="flex min-h-0 flex-1 items-center justify-center rounded-[1.75rem] border border-dashed border-[rgba(31,41,55,0.16)] bg-[rgba(255,251,245,0.72)] p-6 text-center text-slate-500"
+          class="fd-workspace-empty flex min-h-0 flex-1 items-center justify-center rounded-[1.75rem] border border-dashed border-[rgba(31,41,55,0.16)] bg-[rgba(255,251,245,0.72)] p-6 text-center text-slate-500"
         >
           {{ t('workspace.pickDocument') }}
         </div>

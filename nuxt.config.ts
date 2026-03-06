@@ -5,7 +5,8 @@ export default defineNuxtConfig({
   modules: ['@nuxt/ui', '@nuxt/eslint'],
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
-    authSecret: ''
+    authSecret: '',
+    bootstrapAdminPassword: ''
   },
   ui: {
     fonts: false
@@ -26,6 +27,13 @@ export default defineNuxtConfig({
           name: 'description',
           content:
             'A lightweight Markdown-first team knowledge base built for Cloudflare Pages, D1, and R2.'
+        }
+      ],
+      link: [
+        {
+          rel: 'icon',
+          type: 'image/svg+xml',
+          href: '/brand-icon.svg'
         }
       ]
     }

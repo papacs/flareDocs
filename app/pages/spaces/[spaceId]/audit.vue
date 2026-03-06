@@ -22,6 +22,21 @@ const filters = reactive({
   pageSize: 20
 })
 
+const actionOptions = computed(() => [
+  { value: '', label: t('audit.allActions') },
+  { value: 'LOGIN', label: 'LOGIN' },
+  { value: 'LOGOUT', label: 'LOGOUT' },
+  { value: 'CREATE_SPACE', label: 'CREATE_SPACE' },
+  { value: 'DELETE_SPACE', label: 'DELETE_SPACE' },
+  { value: 'ADD_MEMBER', label: 'ADD_MEMBER' },
+  { value: 'UPDATE_MEMBER_ROLE', label: 'UPDATE_MEMBER_ROLE' },
+  { value: 'REMOVE_MEMBER', label: 'REMOVE_MEMBER' },
+  { value: 'CREATE_DOC', label: 'CREATE_DOC' },
+  { value: 'UPDATE_DOC', label: 'UPDATE_DOC' },
+  { value: 'DELETE_DOC', label: 'DELETE_DOC' },
+  { value: 'UPLOAD_ASSET', label: 'UPLOAD_ASSET' }
+])
+
 const { data: meResponse } = await useAsyncData('audit-auth-me', () =>
   $fetch<ApiResponse<{ user: AuthUser }>>('/api/auth/me', {
     headers: requestHeaders
@@ -130,22 +145,11 @@ function applyFilters() {
       class="rounded-[2rem] border border-[rgba(31,41,55,0.12)] bg-[rgba(255,251,245,0.92)] p-4 shadow-[0_20px_45px_rgba(120,98,69,0.12)] sm:p-5"
     >
       <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-        <select
+        <AppSelectMenu
           v-model="filters.action"
-          class="h-12 rounded-xl border border-[rgba(31,41,55,0.12)] bg-white px-4 text-sm text-slate-700 outline-none"
-        >
-          <option value="">{{ t('audit.allActions') }}</option>
-          <option value="LOGIN">LOGIN</option>
-          <option value="LOGOUT">LOGOUT</option>
-          <option value="CREATE_SPACE">CREATE_SPACE</option>
-          <option value="ADD_MEMBER">ADD_MEMBER</option>
-          <option value="UPDATE_MEMBER_ROLE">UPDATE_MEMBER_ROLE</option>
-          <option value="REMOVE_MEMBER">REMOVE_MEMBER</option>
-          <option value="CREATE_DOC">CREATE_DOC</option>
-          <option value="UPDATE_DOC">UPDATE_DOC</option>
-          <option value="DELETE_DOC">DELETE_DOC</option>
-          <option value="UPLOAD_ASSET">UPLOAD_ASSET</option>
-        </select>
+          :options="actionOptions"
+          :aria-label="t('audit.allActions')"
+        />
         <UInput v-model="filters.userId" size="xl" :placeholder="t('audit.userId')" />
         <input
           v-model="filters.dateFrom"

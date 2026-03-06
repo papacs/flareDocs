@@ -20,7 +20,10 @@ defineProps<{
     | 'pdf'
     | 'plus-file'
     | 'plus-folder'
+    | 'settings'
     | 'save'
+    | 'logout'
+    | 'users'
     | 'word'
 }>()
 </script>
@@ -317,6 +320,51 @@ defineProps<{
     <path d="M5 4.5h11l3 3V19.5A1.5 1.5 0 0 1 17.5 21h-11A1.5 1.5 0 0 1 5 19.5Z" />
     <path d="M8 4.5v5h7v-5" />
     <path d="M8 21v-6h8v6" />
+  </svg>
+
+  <svg
+    v-else-if="name === 'settings'"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <circle cx="12" cy="12" r="2.6" />
+    <path d="m12 4 1.6.4.8 1.5 1.7.2 1.3 1.2-.2 1.7 1 1.4-.8 1.6.8 1.6-1 1.4.2 1.7-1.3 1.2-1.7.2-.8 1.5L12 20l-1.6-.4-.8-1.5-1.7-.2-1.3-1.2.2-1.7-1-1.4.8-1.6-.8-1.6 1-1.4-.2-1.7 1.3-1.2 1.7-.2.8-1.5Z" />
+  </svg>
+
+  <svg
+    v-else-if="name === 'users'"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <circle cx="9" cy="8.2" r="2.7" />
+    <path d="M4.8 18.2a4.2 4.2 0 0 1 8.4 0" />
+    <circle cx="16.6" cy="9.4" r="2.2" />
+    <path d="M14.8 18.2a3.6 3.6 0 0 1 4.4-3.5 3.6 3.6 0 0 1 0 3.5" />
+  </svg>
+
+  <svg
+    v-else-if="name === 'logout'"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M10 4.5H6.5A1.5 1.5 0 0 0 5 6v12a1.5 1.5 0 0 0 1.5 1.5H10" />
+    <path d="M14.5 8.5 19 12l-4.5 3.5" />
+    <path d="M10.5 12H19" />
   </svg>
 
   <svg

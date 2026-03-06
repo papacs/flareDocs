@@ -12,10 +12,35 @@ const unauthenticatedUserResponse: ApiResponse<{ user: AuthUser }> = {
 }
 const form = reactive({
   username: '',
-  password: ''
+  password: '',
+  captchaCode: ''
 })
 const pending = ref(false)
 const errorMessage = ref('')
+const captchaImageUrl = ref('')
+const captchaToken = ref('')
+
+async function loadCaptcha() {
+  try {
+    const response = await $fetch<
+      ApiResponse<{ captcha: { token: string; imageDataUrl: string; expiresInSeconds: number } }>
+    >('/api/auth/captcha')
+
+    if (response.ok) {
+      captchaImageUrl.value = response.data.captcha.imageDataUrl
+      captchaToken.value = response.data.captcha.token
+      form.captchaCode = ''
+      return
+    }
+  } catch {
+    // keep fallback text below
+  }
+
+  captchaImageUrl.value = ''
+  captchaToken.value = ''
+}
+
+await loadCaptcha()
 
 const { data: meResponse } = await useAsyncData('login-auth-me', () =>
   $fetch<ApiResponse<{ user: AuthUser }>>('/api/auth/me', {
@@ -36,7 +61,9 @@ async function submit() {
       method: 'POST',
       body: {
         username: form.username,
-        password: form.password
+        password: form.password,
+        captchaCode: form.captchaCode,
+        captchaToken: captchaToken.value
       }
     })
 
@@ -53,6 +80,8 @@ async function submit() {
 
     errorMessage.value =
       apiError.data?.error?.message ?? apiError.message ?? 'Authentication failed.'
+
+    await loadCaptcha()
   } finally {
     pending.value = false
   }
@@ -62,11 +91,14 @@ async function submit() {
 <template>
   <main class="fd-auth-page">
     <div class="fd-auth-topbar">
+      <NuxtLink class="fd-auth-brand-link" to="/">
+        <BrandMark size="sm" />
+      </NuxtLink>
       <LocaleSwitch />
     </div>
 
     <section class="fd-auth-shell">
-      <div class="fd-auth-copy">
+      <div class="fd-auth-copy hidden lg:block">
         <p class="fd-kicker">{{ t('login.kicker') }}</p>
         <h1 class="fd-auth-title">{{ t('login.title') }}</h1>
         <p class="fd-auth-summary">{{ t('login.summary') }}</p>
@@ -84,6 +116,9 @@ async function submit() {
       </div>
 
       <div class="fd-auth-card">
+        <NuxtLink class="fd-auth-card-back" to="/" :title="t('common.home')" :aria-label="t('common.home')">
+          <WorkspaceIcon name="back" class="h-4 w-4" />
+        </NuxtLink>
         <div class="fd-auth-glow" aria-hidden="true" />
         <div class="mt-6">
           <p class="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--fd-accent)]">
@@ -94,9 +129,6 @@ async function submit() {
           </h2>
           <p class="mt-2 text-sm leading-6 text-slate-500">
             {{ t('login.panelSummaryLogin') }}
-          </p>
-          <p class="mt-2 text-xs leading-5 text-slate-400">
-            {{ t('login.adminCreateOnly') }}
           </p>
         </div>
 
@@ -120,12 +152,27 @@ async function submit() {
               class="fd-auth-input"
             />
           </div>
+          <div class="fd-auth-captcha-row">
+            <UInput
+              v-model="form.captchaCode"
+              size="xl"
+              inputmode="numeric"
+              :placeholder="t('login.captchaInput')"
+              class="fd-auth-input"
+            />
+            <button type="button" class="fd-auth-captcha-box" :title="t('login.refreshCaptcha')" @click="loadCaptcha">
+              <img
+                v-if="captchaImageUrl"
+                :src="captchaImageUrl"
+                class="fd-auth-captcha-image"
+                alt="captcha"
+              />
+              <span v-else class="fd-auth-captcha-text">{{ t('login.refreshCaptcha') }}</span>
+            </button>
+          </div>
           <p v-if="errorMessage" class="text-sm text-rose-600">{{ errorMessage }}</p>
           <UButton type="submit" block size="xl" color="neutral" class="fd-auth-submit" :loading="pending">
             {{ t('login.submitLogin') }}
-          </UButton>
-          <UButton block size="xl" color="neutral" variant="ghost" class="fd-auth-back" to="/">
-            {{ t('login.back') }}
           </UButton>
         </form>
 
