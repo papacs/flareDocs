@@ -9,18 +9,18 @@
 
 ## Master Checklist
 
-| Step | Task | Status | Notes |
-| --- | --- | --- | --- |
-| 0 | Create baseline repository docs | Done | `README.md`, `AGENTS.md`, `TASKS.md` created |
-| 1 | Initialize Nuxt baseline + TS + Tailwind + ESLint/Prettier + Nuxt UI | Done | Current scaffold is Nuxt 4.3.1; prompt originally asked for Nuxt 3 |
-| 2 | Integrate Drizzle + D1 schema + migrations | Done | Schema, initial migration, D1 helper, and health endpoint added |
-| 3 | Implement users + auth APIs | Done | JWT cookie, admin-created accounts, login/logout/`me`, and same-origin middleware |
-| 4 | Implement spaces + membership + RBAC helper | Done | Space CRUD entry points and member management routes added |
-| 5 | Implement documents CRUD + tree + optimistic lock | Done | Tree endpoint, CRUD, parent checks, and 409 conflict response added |
-| 6 | Add ByteMD editor and document UI | Done | Responsive login, dashboard, workspace, and version-aware save flow added |
-| 7 | Add R2 upload flow | Done | R2 upload API, public asset route, and editor insertion wired up |
-| 8 | Add audit log write path and query UI | Done | Async audit writes, admin query API, and audit page added |
-| 9 | Add `scripts/setup.ts` and deployment docs | Done | Setup script, `.env.example`, and deployment notes added |
+| Step | Task                                                                 | Status | Notes                                                                             |
+| ---- | -------------------------------------------------------------------- | ------ | --------------------------------------------------------------------------------- |
+| 0    | Create baseline repository docs                                      | Done   | `README.md`, `AGENTS.md`, `TASKS.md` created                                      |
+| 1    | Initialize Nuxt baseline + TS + Tailwind + ESLint/Prettier + Nuxt UI | Done   | Current scaffold is Nuxt 4.3.1; prompt originally asked for Nuxt 3                |
+| 2    | Integrate Drizzle + D1 schema + migrations                           | Done   | Schema, initial migration, D1 helper, and health endpoint added                   |
+| 3    | Implement users + auth APIs                                          | Done   | JWT cookie, admin-created accounts, login/logout/`me`, and same-origin middleware |
+| 4    | Implement spaces + membership + RBAC helper                          | Done   | Space CRUD entry points and member management routes added                        |
+| 5    | Implement documents CRUD + tree + optimistic lock                    | Done   | Tree endpoint, CRUD, parent checks, and 409 conflict response added               |
+| 6    | Add ByteMD editor and document UI                                    | Done   | Responsive login, dashboard, workspace, and version-aware save flow added         |
+| 7    | Add R2 upload flow                                                   | Done   | R2 upload API, public asset route, and editor insertion wired up                  |
+| 8    | Add audit log write path and query UI                                | Done   | Async audit writes, admin query API, and audit page added                         |
+| 9    | Add `scripts/setup.ts` and deployment docs                           | Done   | Setup script, `.env.example`, and deployment notes added                          |
 
 ## Current Focus
 
@@ -198,6 +198,27 @@ Date: 2026-03-06
 - Removed duplicate current-document crumbs from the workspace path display in [spaces/[spaceId].vue](/mnt/e/workspace/flareDocs/app/pages/spaces/[spaceId].vue) so the document title is shown only once
 - Added mobile workspace compatibility in [spaces/[spaceId].vue](/mnt/e/workspace/flareDocs/app/pages/spaces/[spaceId].vue) and [main.css](/mnt/e/workspace/flareDocs/app/assets/css/main.css): right-top directory trigger, slide-in tree drawer, backdrop click close, and `Esc` close behavior
 - Added mobile fullscreen compact mode in [main.css](/mnt/e/workspace/flareDocs/app/assets/css/main.css) and [spaces/[spaceId].vue](/mnt/e/workspace/flareDocs/app/pages/spaces/[spaceId].vue): hide top metadata blocks, keep a single action-button row, and reclaim vertical reading space
+- Reworked the workspace into a unified immersive layout in [spaces/[spaceId].vue](/mnt/f/newworkspace/flareDocs/app/pages/spaces/[spaceId].vue) and [main.css](/mnt/f/newworkspace/flareDocs/app/assets/css/main.css): content-first full-width reading surface, drawer-style tree navigation on both mobile and desktop, right-top unified action menu, and autosave (debounced edits + 60s interval + background flush); added related i18n copy in [useAppLocale.ts](/mnt/f/newworkspace/flareDocs/app/composables/useAppLocale.ts) and documented behavior in [README.md](/mnt/f/newworkspace/flareDocs/README.md)
+
+Date: 2026-03-07
+
+- Updated [spaces/[spaceId].vue](/mnt/f/newworkspace/flareDocs/app/pages/spaces/[spaceId].vue) to stop auto-selecting/opening a document after switching workspace; users now pick a document explicitly
+- Updated [spaces/[spaceId].vue](/mnt/f/newworkspace/flareDocs/app/pages/spaces/[spaceId].vue) and [main.css](/mnt/f/newworkspace/flareDocs/app/assets/css/main.css) so desktop keeps a persistent left document tree while mobile remains a drawer interaction
+- Hid document-header tree trigger buttons on desktop in [spaces/[spaceId].vue](/mnt/f/newworkspace/flareDocs/app/pages/spaces/[spaceId].vue) to avoid duplicate controls when the left sidebar is always visible
+- Lowered the persistent-sidebar breakpoint from `1024px` to `768px` in [main.css](/mnt/f/newworkspace/flareDocs/app/assets/css/main.css) and [spaces/[spaceId].vue](/mnt/f/newworkspace/flareDocs/app/pages/spaces/[spaceId].vue) so common PC window widths no longer fall back to drawer behavior
+- Updated action menu rows in [spaces/[spaceId].vue](/mnt/f/newworkspace/flareDocs/app/pages/spaces/[spaceId].vue) and [main.css](/mnt/f/newworkspace/flareDocs/app/assets/css/main.css) to use right-side function icons (`树结构/编辑/移动/全屏/导出/删除`) for clearer operation targeting
+- Converted the document action dropdown to icon-only controls in [spaces/[spaceId].vue](/mnt/f/newworkspace/flareDocs/app/pages/spaces/[spaceId].vue) and [main.css](/mnt/f/newworkspace/flareDocs/app/assets/css/main.css), replaced title-subline status text with `更新时间 + 最近更新人`, and compacted left tree row spacing
+- Extended document detail responses in [index.get.ts](/mnt/f/newworkspace/flareDocs/app/server/api/spaces/[spaceId]/docs/[docId]/index.get.ts), [index.put.ts](/mnt/f/newworkspace/flareDocs/app/server/api/spaces/[spaceId]/docs/[docId]/index.put.ts), and [api.ts](/mnt/f/newworkspace/flareDocs/app/types/api.ts) with `updatedByName` for UI metadata display
+- Updated [users.vue](/mnt/f/newworkspace/flareDocs/app/pages/admin/users.vue) for mobile: tightened top spacing and pinned the home icon button to the top-right corner
+- Reworked workspace action menu in [spaces/[spaceId].vue](/mnt/f/newworkspace/flareDocs/app/pages/spaces/[spaceId].vue) and [main.css](/mnt/f/newworkspace/flareDocs/app/assets/css/main.css) into a vertical icon stack, added a new `info` icon in [WorkspaceIcon.vue](/mnt/f/newworkspace/flareDocs/app/components/WorkspaceIcon.vue), removed inline breadcrumb chips, and introduced a document-info modal (`目录/创建时间/创建人/最近更新时间/最近更新人`)
+- Expanded document detail payloads with `createdAt` and `createdByName` in [api.ts](/mnt/f/newworkspace/flareDocs/app/types/api.ts), [index.get.ts](/mnt/f/newworkspace/flareDocs/app/server/api/spaces/[spaceId]/docs/[docId]/index.get.ts), and [index.put.ts](/mnt/f/newworkspace/flareDocs/app/server/api/spaces/[spaceId]/docs/[docId]/index.put.ts)
+- Added document-size metadata display in the document-info modal in [spaces/[spaceId].vue](/mnt/f/newworkspace/flareDocs/app/pages/spaces/[spaceId].vue) with UTF-8 byte-size formatting (`B/KB/MB`) and matching locale copy in [useAppLocale.ts](/mnt/f/newworkspace/flareDocs/app/composables/useAppLocale.ts)
+- Refined mobile admin-user layout in [users.vue](/mnt/f/newworkspace/flareDocs/app/pages/admin/users.vue): tighter outer/card spacing, top-right home icon alignment, stacked user rows, and two-column action buttons to reduce cramped wrapping on small screens
+- Updated [users.vue](/mnt/f/newworkspace/flareDocs/app/pages/admin/users.vue) so the current logged-in user no longer renders a delete button in the user list
+- Updated [index.vue](/mnt/f/newworkspace/flareDocs/app/pages/index.vue) for mobile homepage behavior: keep metric cards (now including private/team/public/total counts) and hide the lower workspace list on small screens; added `index.metricPrivate` locale copy in [useAppLocale.ts](/mnt/f/newworkspace/flareDocs/app/composables/useAppLocale.ts)
+- Hid the homepage session panel on small screens in [index.vue](/mnt/f/newworkspace/flareDocs/app/pages/index.vue) to remove the residual lower border block in mobile view
+- Updated reader interaction in [spaces/[spaceId].vue](/mnt/f/newworkspace/flareDocs/app/pages/spaces/[spaceId].vue) and [main.css](/mnt/f/newworkspace/flareDocs/app/assets/css/main.css): progress rail is now always interactive (including touch), supports direct pointer-down jump, and has stronger always-visible rail contrast
+- `pnpm typecheck` still fails in this environment due missing optional native package `@oxc-parser/binding-linux-x64-gnu`; frontend changes were validated with `pnpm prettier --check`
 
 ## In Progress
 

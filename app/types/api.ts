@@ -61,7 +61,10 @@ export type DocumentDetail = {
   parentId: number | null
   isFolder: boolean
   version: number
+  createdAt: number
+  createdByName: string | null
   updatedAt: number
+  updatedByName: string | null
 }
 
 export type AuditLogItem = {

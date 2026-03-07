@@ -27,18 +27,22 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'switch.en': 'EN',
     'login.kicker': '访问',
     'login.title': '在桌面端、手机端和窄屏内嵌浏览器中，都能稳定登录。',
-    'login.summary': '认证层已经启用 HttpOnly Cookie 和同源写保护。这个页面默认适配小屏、触控和窄宽度布局。',
+    'login.summary':
+      '认证层已经启用 HttpOnly Cookie 和同源写保护。这个页面默认适配小屏、触控和窄宽度布局。',
     'login.featureSecurityLabel': '安全',
     'login.featureSecurityValue': 'HttpOnly Cookie 会话与同源写保护已经启用。',
     'login.featureDevicesLabel': '体验',
-    'login.featureDevicesValue': '桌面端、手机端和嵌入式浏览器都能保持稳定布局。',
+    'login.featureDevicesValue':
+      '桌面端、手机端和嵌入式浏览器都能保持稳定布局。',
     'login.tabLogin': '登录',
     'login.tabRegister': '注册',
     'login.panelTitleLogin': '进入你的知识空间',
-    'login.panelSummaryLogin': '输入账号后直接进入空间列表，继续管理文档、成员和审计记录。',
+    'login.panelSummaryLogin':
+      '输入账号后直接进入空间列表，继续管理文档、成员和审计记录。',
     'login.adminCreateOnly': '当前系统已关闭自由注册，请联系管理员创建账号。',
     'login.panelTitleRegister': '创建新的团队账号',
-    'login.panelSummaryRegister': '注册完成后会直接进入系统，可以继续创建空间并邀请成员。',
+    'login.panelSummaryRegister':
+      '注册完成后会直接进入系统，可以继续创建空间并邀请成员。',
     'login.username': '用户名',
     'login.password': '密码',
     'login.submitLogin': '登录',
@@ -48,7 +52,8 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'login.back': '返回空间列表',
     'login.loggedInAs': ({ username }) => `你已登录为 ${username}。`,
     'index.title': '一个移动端优先、已接通真实接口的小团队知识库。',
-    'index.summary': '认证、空间、成员、文档树 API 和乐观锁都已经接通，账号由系统管理员统一创建。',
+    'index.summary':
+      '认证、空间、成员、文档树 API 和乐观锁都已经接通，账号由系统管理员统一创建。',
     'index.openWorkspace': '打开工作区',
     'index.loginOrRegister': '登录或注册',
     'index.loginOnly': '登录',
@@ -64,28 +69,34 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'index.appearanceHint': '默认浅色，可切换为深色外观。',
     'index.userManagement': '人员管理',
     'index.logout': '退出登录',
-    'index.loggedInHint': '你可以先创建空间，再进入文档工作区。手机端会保持上下布局，不会挤成难用的侧栏。',
+    'index.loggedInHint':
+      '你可以先创建空间，再进入文档工作区。手机端会保持上下布局，不会挤成难用的侧栏。',
     'index.guestHint': '下方会显示公开空间。登录后可以创建团队空间并管理成员。',
     'index.newSpaceName': '新空间名称',
     'index.privateOnly': '私有',
     'index.teamOnly': '团队',
     'index.publicRead': '公开',
     'index.openPersonalWorkspace': '打开个人工作区',
-    'index.personalWorkspaceHint': '系统会为每个用户自动创建一个个人工作区，默认只有你自己可见。',
+    'index.personalWorkspaceHint':
+      '系统会为每个用户自动创建一个个人工作区，默认只有你自己可见。',
     'index.metricSpaces': '空间总数',
+    'index.metricPrivate': '私有空间',
     'index.metricTeam': '团队空间',
     'index.metricPublic': '公开空间',
     'index.quickCreate': '快速创建',
-    'index.profilePanelHint': '可在此修改头像，或填写当前密码与新密码来更新登录密码。',
+    'index.profilePanelHint':
+      '可在此修改头像，或填写当前密码与新密码来更新登录密码。',
     'index.currentPassword': '当前密码',
     'index.newPassword': '新密码',
-    'index.passwordHint': '仅修改头像可不填密码；修改密码时需同时填写当前密码和新密码。',
+    'index.passwordHint':
+      '仅修改头像可不填密码；修改密码时需同时填写当前密码和新密码。',
     'index.saveProfile': '保存个人设置',
     'index.profileSaved': '个人设置已保存。',
     'index.profileSaveFailed': '保存个人设置失败，请稍后重试。',
     'index.spaceCardHint': '进入工作区',
     'index.guestPanelTitle': '快速开始',
-    'index.guestPanelSummary': ({ count }) => `当前可浏览 ${count} 个公开空间。登录后可创建和协作。`,
+    'index.guestPanelSummary': ({ count }) =>
+      `当前可浏览 ${count} 个公开空间。登录后可创建和协作。`,
     'index.guestPanelFeatureRead': '访客可直接浏览公开空间内容。',
     'index.guestPanelFeatureManage': '登录后可创建团队空间并管理成员权限。',
     'index.guestPanelFeaturePrivate': '每个账号都会自动获得一个个人工作区。',
@@ -96,14 +107,16 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'index.deleteSpace': '删除工作区',
     'index.deleteSpaceModalTitle': ({ name }) => `确认删除「${name}」`,
     'index.deleteSpaceModalHint': '删除后不可恢复。',
-    'index.deleteSpaceModalCascade': '该工作区下的目录、文档和已上传文件将一并删除，请谨慎操作。',
+    'index.deleteSpaceModalCascade':
+      '该工作区下的目录、文档和已上传文件将一并删除，请谨慎操作。',
     'index.deleteSpaceFailed': '删除工作区失败，请稍后重试。',
     'index.createSpace': '创建空间',
     'index.slug': ({ slug }) => `Slug：${slug}`,
     'index.role': '角色',
     'index.open': '打开',
     'index.noSpaces': '还没有空间',
-    'index.noSpacesHint': '登录后创建第一个空间，或者后续开放公开空间供访客阅读。',
+    'index.noSpacesHint':
+      '登录后创建第一个空间，或者后续开放公开空间供访客阅读。',
     'workspace.kicker': '工作区',
     'workspace.space': '空间',
     'workspace.signedInAs': ({ username }) => `当前登录：${username}`,
@@ -121,7 +134,8 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'workspace.folderName': '目录名称',
     'workspace.documentTitle': '文档标题',
     'workspace.enterName': '请输入文档或目录名称。',
-    'workspace.createLocationHint': '如果当前选中目录，将在该目录下创建；如果当前选中文档，将创建到它所在的同级目录。',
+    'workspace.createLocationHint':
+      '如果当前选中目录，将在该目录下创建；如果当前选中文档，将创建到它所在的同级目录。',
     'workspace.noDocuments': '还没有文档。先创建一个目录或文档。',
     'workspace.document': '文档',
     'workspace.move': '移动到...',
@@ -130,20 +144,42 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'workspace.exportPdf': '导出为 PDF',
     'workspace.exportWord': '导出为 Word',
     'workspace.exportPopupBlocked': '浏览器拦截了导出窗口，请允许弹窗后重试。',
+    'workspace.exportPdfEngineMissing':
+      'PDF 导出引擎加载失败。请检查网络，或改为本地引入 html2pdf 后重试。',
+    'workspace.actions': '操作',
+    'workspace.readMode': '阅读模式',
+    'workspace.editMode': '编辑模式',
+    'workspace.saveStatusSaving': '保存中...',
+    'workspace.saveStatusSaved': '已保存',
+    'workspace.saveStatusError': '保存失败',
+    'workspace.unknownUpdater': '未知用户',
+    'workspace.docInfo': '文档信息',
+    'workspace.docInfoFolder': '目录',
+    'workspace.docInfoCreatedAt': '创建时间',
+    'workspace.docInfoCreatedBy': '创建人',
+    'workspace.docInfoUpdatedAt': '最近更新时间',
+    'workspace.docInfoUpdatedBy': '最近更新人',
+    'workspace.docInfoFileSize': '文件大小',
+    'workspace.rootFolder': '根目录',
     'workspace.fullscreen': '全屏查看',
     'workspace.exitFullscreen': '退出全屏',
     'workspace.confirmDelete': '确认删除当前文档或目录吗？此操作不可撤销。',
     'workspace.moveTarget': '移动目标',
     'workspace.moveRoot': '顶层目录',
     'workspace.confirmMove': '确认移动',
-    'workspace.moveHint': '只能移动到目录下，系统会自动阻止把目录移动到自己的子目录中。',
+    'workspace.moveHint':
+      '只能移动到目录下，系统会自动阻止把目录移动到自己的子目录中。',
     'workspace.moveFailed': '移动文档失败。',
-    'workspace.version': ({ version, updatedAt }) => `版本 ${version} · 更新时间 ${updatedAt}`,
+    'workspace.version': ({ version, updatedAt }) =>
+      `版本 ${version} · ${updatedAt}`,
     'workspace.conflict': ({ version, updatedAt }) =>
       `检测到保存冲突。当前最新版本是 ${version}，更新时间是 ${updatedAt}。请先重新加载最新内容再保存。`,
-    'workspace.folderHint': '这是文档树中的一个目录。选择子文档阅读或编辑内容，或者在该目录下新建条目。',
-    'workspace.folderMoveHint': '目录也可以移动到其他目录下，移动后会一起带上它下面的所有子文档。',
-    'workspace.uploadHint': '可直接拖拽图片进编辑器，或用工具栏插图。编辑时在“编辑 / 预览”标签间切换即可查看渲染效果。',
+    'workspace.folderHint':
+      '这是文档树中的一个目录。选择子文档阅读或编辑内容，或者在该目录下新建条目。',
+    'workspace.folderMoveHint':
+      '目录也可以移动到其他目录下，移动后会一起带上它下面的所有子文档。',
+    'workspace.uploadHint':
+      '可直接拖拽图片进编辑器，或用工具栏插图。编辑时在“编辑 / 预览”标签间切换即可查看渲染效果。',
     'workspace.pickDocument': '从左侧树中选择一个文档开始阅读或编辑。',
     'audit.kicker': '审计',
     'audit.activity': ({ name }) => `${name} 活动记录`,
@@ -157,7 +193,8 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'audit.ip': ({ ip }) => `IP：${ip}`,
     'audit.ua': ({ userAgent }) => `UA：${userAgent}`,
     'audit.noLogs': '当前筛选条件下没有审计记录。',
-    'audit.pageSummary': ({ page, total }) => `第 ${page} 页 · 共 ${total} 条记录`,
+    'audit.pageSummary': ({ page, total }) =>
+      `第 ${page} 页 · 共 ${total} 条记录`,
     'audit.previous': '上一页',
     'audit.next': '下一页',
     'adminUsers.kicker': '人员管理',
@@ -173,16 +210,21 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'adminUsers.disable': '停用',
     'adminUsers.disabled': '已停用',
     'adminUsers.resetPassword': '重置密码',
-    'adminUsers.resetPrompt': ({ username }) => `请输入 ${username} 的新密码（8-128 位）：`,
-    'adminUsers.deleteConfirm': ({ username }) => `确认删除账号 ${username} 吗？该操作不可撤销。`,
+    'adminUsers.resetPrompt': ({ username }) =>
+      `请输入 ${username} 的新密码（8-128 位）：`,
+    'adminUsers.deleteConfirm': ({ username }) =>
+      `确认删除账号 ${username} 吗？该操作不可撤销。`,
     'adminUsers.createSubmit': '创建账号',
     'adminUsers.createSuccess': ({ username }) => `账号 ${username} 创建成功。`,
     'adminUsers.createFailed': '创建账号失败，请稍后重试。',
     'adminUsers.enableSuccess': ({ username }) => `账号 ${username} 已启用。`,
     'adminUsers.disableSuccess': ({ username }) => `账号 ${username} 已停用。`,
-    'adminUsers.grantAdminSuccess': ({ username }) => `账号 ${username} 已设为系统管理员。`,
-    'adminUsers.revokeAdminSuccess': ({ username }) => `账号 ${username} 已取消系统管理员权限。`,
-    'adminUsers.resetPasswordSuccess': ({ username }) => `账号 ${username} 密码已重置。`,
+    'adminUsers.grantAdminSuccess': ({ username }) =>
+      `账号 ${username} 已设为系统管理员。`,
+    'adminUsers.revokeAdminSuccess': ({ username }) =>
+      `账号 ${username} 已取消系统管理员权限。`,
+    'adminUsers.resetPasswordSuccess': ({ username }) =>
+      `账号 ${username} 密码已重置。`,
     'adminUsers.deleteSuccess': ({ username }) => `账号 ${username} 已删除。`,
     'adminUsers.actionFailed': '账号操作失败，请稍后重试。',
     'adminUsers.listTitle': '账号列表',
@@ -212,19 +254,26 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'switch.zh': '中',
     'switch.en': 'EN',
     'login.kicker': 'Access',
-    'login.title': 'Login on desktop, phone, or narrow in-app browsers without the layout collapsing.',
-    'login.summary': 'The auth layer already uses HttpOnly cookies and same-origin write protection. This page stays touch-friendly and readable on small screens.',
+    'login.title':
+      'Login on desktop, phone, or narrow in-app browsers without the layout collapsing.',
+    'login.summary':
+      'The auth layer already uses HttpOnly cookies and same-origin write protection. This page stays touch-friendly and readable on small screens.',
     'login.featureSecurityLabel': 'Security',
-    'login.featureSecurityValue': 'HttpOnly cookie sessions and same-origin write protection are already enabled.',
+    'login.featureSecurityValue':
+      'HttpOnly cookie sessions and same-origin write protection are already enabled.',
     'login.featureDevicesLabel': 'Experience',
-    'login.featureDevicesValue': 'Desktop, mobile, and in-app browser layouts stay stable and readable.',
+    'login.featureDevicesValue':
+      'Desktop, mobile, and in-app browser layouts stay stable and readable.',
     'login.tabLogin': 'Login',
     'login.tabRegister': 'Register',
     'login.panelTitleLogin': 'Enter your workspace',
-    'login.panelSummaryLogin': 'Sign in to continue managing documents, members, and audit activity.',
-    'login.adminCreateOnly': 'Self registration is disabled. Ask an administrator to create your account.',
+    'login.panelSummaryLogin':
+      'Sign in to continue managing documents, members, and audit activity.',
+    'login.adminCreateOnly':
+      'Self registration is disabled. Ask an administrator to create your account.',
     'login.panelTitleRegister': 'Create a team account',
-    'login.panelSummaryRegister': 'Register a new account and continue into the app to create your first space.',
+    'login.panelSummaryRegister':
+      'Register a new account and continue into the app to create your first space.',
     'login.username': 'username',
     'login.password': 'password',
     'login.submitLogin': 'Login',
@@ -232,9 +281,12 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'login.refreshCaptcha': 'Refresh captcha',
     'login.submitRegister': 'Create account',
     'login.back': 'Back To Spaces',
-    'login.loggedInAs': ({ username }) => `You are already logged in as ${username}.`,
-    'index.title': 'A mobile-first team knowledge base that is already backed by real APIs.',
-    'index.summary': 'Authentication, spaces, memberships, document tree APIs, and optimistic locking are already in place, and accounts are now created by system admins only.',
+    'login.loggedInAs': ({ username }) =>
+      `You are already logged in as ${username}.`,
+    'index.title':
+      'A mobile-first team knowledge base that is already backed by real APIs.',
+    'index.summary':
+      'Authentication, spaces, memberships, document tree APIs, and optimistic locking are already in place, and accounts are now created by system admins only.',
     'index.openWorkspace': 'Open Workspace',
     'index.loginOrRegister': 'Login Or Register',
     'index.loginOnly': 'Login',
@@ -247,25 +299,32 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'index.appearance': 'Appearance',
     'index.appearanceLight': 'Light',
     'index.appearanceDark': 'Dark',
-    'index.appearanceHint': 'Light is default. Switch to dark for a dimmer interface.',
+    'index.appearanceHint':
+      'Light is default. Switch to dark for a dimmer interface.',
     'index.userManagement': 'User Management',
     'index.logout': 'Logout',
-    'index.loggedInHint': 'You can create spaces here and then open the document workspace. On phones, this panel stays above the list instead of squeezing into a side rail.',
-    'index.guestHint': 'Public spaces will appear below. Login to create team spaces and manage members.',
+    'index.loggedInHint':
+      'You can create spaces here and then open the document workspace. On phones, this panel stays above the list instead of squeezing into a side rail.',
+    'index.guestHint':
+      'Public spaces will appear below. Login to create team spaces and manage members.',
     'index.newSpaceName': 'New space name',
     'index.privateOnly': 'Private',
     'index.teamOnly': 'Team',
     'index.publicRead': 'Public',
     'index.openPersonalWorkspace': 'Open Personal Workspace',
-    'index.personalWorkspaceHint': 'Each user gets a personal workspace automatically, visible only to that user by default.',
+    'index.personalWorkspaceHint':
+      'Each user gets a personal workspace automatically, visible only to that user by default.',
     'index.metricSpaces': 'Spaces',
+    'index.metricPrivate': 'Private',
     'index.metricTeam': 'Team',
     'index.metricPublic': 'Public',
     'index.quickCreate': 'Quick create',
-    'index.profilePanelHint': 'Change your avatar, or fill current and new passwords to update credentials.',
+    'index.profilePanelHint':
+      'Change your avatar, or fill current and new passwords to update credentials.',
     'index.currentPassword': 'Current password',
     'index.newPassword': 'New password',
-    'index.passwordHint': 'Leave passwords empty for avatar-only updates. Password updates require both fields.',
+    'index.passwordHint':
+      'Leave passwords empty for avatar-only updates. Password updates require both fields.',
     'index.saveProfile': 'Save profile',
     'index.profileSaved': 'Profile updated.',
     'index.profileSaveFailed': 'Unable to save profile settings.',
@@ -273,9 +332,12 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'index.guestPanelTitle': 'Quick Start',
     'index.guestPanelSummary': ({ count }) =>
       `${count} public spaces are available to browse now. Login to create and collaborate.`,
-    'index.guestPanelFeatureRead': 'Guests can browse public spaces immediately.',
-    'index.guestPanelFeatureManage': 'After login, you can create team spaces and manage members.',
-    'index.guestPanelFeaturePrivate': 'Each account gets a personal workspace automatically.',
+    'index.guestPanelFeatureRead':
+      'Guests can browse public spaces immediately.',
+    'index.guestPanelFeatureManage':
+      'After login, you can create team spaces and manage members.',
+    'index.guestPanelFeaturePrivate':
+      'Each account gets a personal workspace automatically.',
     'index.guestPanelOpenPublic': 'Browse Public Spaces',
     'index.spaceNameRule': 'Space names must be between 2 and 64 characters.',
     'index.invalidSpaceName': 'Enter a space name between 2 and 64 characters.',
@@ -283,14 +345,16 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'index.deleteSpace': 'Delete Workspace',
     'index.deleteSpaceModalTitle': ({ name }) => `Delete "${name}"?`,
     'index.deleteSpaceModalHint': 'This action cannot be undone.',
-    'index.deleteSpaceModalCascade': 'All folders, documents, and uploaded files in this workspace will be deleted together.',
+    'index.deleteSpaceModalCascade':
+      'All folders, documents, and uploaded files in this workspace will be deleted together.',
     'index.deleteSpaceFailed': 'Unable to delete the workspace right now.',
     'index.createSpace': 'Create Space',
     'index.slug': ({ slug }) => `Slug: ${slug}`,
     'index.role': 'Role',
     'index.open': 'Open',
     'index.noSpaces': 'No spaces yet',
-    'index.noSpacesHint': 'Create the first space after logging in, or expose a public space later for guest read access.',
+    'index.noSpacesHint':
+      'Create the first space after logging in, or expose a public space later for guest read access.',
     'workspace.kicker': 'Workspace',
     'workspace.space': 'Space',
     'workspace.signedInAs': ({ username }) => `Signed in as ${username}`,
@@ -299,7 +363,8 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'workspace.audit': 'Audit',
     'workspace.tree': 'Tree',
     'workspace.documents': 'Documents',
-    'workspace.treeHint': 'Multi-level folders are supported. Use the control before a folder to expand or collapse it.',
+    'workspace.treeHint':
+      'Multi-level folders are supported. Use the control before a folder to expand or collapse it.',
     'workspace.currentPath': 'Current path',
     'workspace.expandAll': 'Expand all',
     'workspace.collapseAll': 'Collapse all',
@@ -308,30 +373,57 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'workspace.folderName': 'Folder name',
     'workspace.documentTitle': 'Document title',
     'workspace.enterName': 'Enter a document or folder name.',
-    'workspace.createLocationHint': 'If a folder is selected, the new item is created inside it. If a document is selected, the new item is created beside it.',
-    'workspace.noDocuments': 'No documents yet. Create a folder or document to start.',
+    'workspace.createLocationHint':
+      'If a folder is selected, the new item is created inside it. If a document is selected, the new item is created beside it.',
+    'workspace.noDocuments':
+      'No documents yet. Create a folder or document to start.',
     'workspace.document': 'Document',
     'workspace.move': 'Move to...',
     'workspace.export': 'Export',
     'workspace.exportMd': 'Export as Markdown',
     'workspace.exportPdf': 'Export as PDF',
     'workspace.exportWord': 'Export as Word',
-    'workspace.exportPopupBlocked': 'The browser blocked the export window. Allow popups and try again.',
+    'workspace.exportPopupBlocked':
+      'The browser blocked the export window. Allow popups and try again.',
+    'workspace.exportPdfEngineMissing':
+      'PDF export engine failed to load. Check network access or provide a local html2pdf script.',
+    'workspace.actions': 'Actions',
+    'workspace.readMode': 'Reading mode',
+    'workspace.editMode': 'Editing mode',
+    'workspace.saveStatusSaving': 'Saving...',
+    'workspace.saveStatusSaved': 'Saved',
+    'workspace.saveStatusError': 'Save failed',
+    'workspace.unknownUpdater': 'Unknown user',
+    'workspace.docInfo': 'Document info',
+    'workspace.docInfoFolder': 'Folder',
+    'workspace.docInfoCreatedAt': 'Created at',
+    'workspace.docInfoCreatedBy': 'Created by',
+    'workspace.docInfoUpdatedAt': 'Updated at',
+    'workspace.docInfoUpdatedBy': 'Updated by',
+    'workspace.docInfoFileSize': 'File size',
+    'workspace.rootFolder': 'Root',
     'workspace.fullscreen': 'Open fullscreen',
     'workspace.exitFullscreen': 'Exit fullscreen',
-    'workspace.confirmDelete': 'Delete this document or folder? This action cannot be undone.',
+    'workspace.confirmDelete':
+      'Delete this document or folder? This action cannot be undone.',
     'workspace.moveTarget': 'Move target',
     'workspace.moveRoot': 'Top level',
     'workspace.confirmMove': 'Confirm move',
-    'workspace.moveHint': 'Items can only be moved into folders. The app blocks moves that would place a folder inside its own descendant.',
+    'workspace.moveHint':
+      'Items can only be moved into folders. The app blocks moves that would place a folder inside its own descendant.',
     'workspace.moveFailed': 'Unable to move document.',
-    'workspace.version': ({ version, updatedAt }) => `Version ${version} · updated at ${updatedAt}`,
+    'workspace.version': ({ version, updatedAt }) =>
+      `Version ${version} · ${updatedAt}`,
     'workspace.conflict': ({ version, updatedAt }) =>
       `Conflict detected. Current version is ${version}, updated at ${updatedAt}. Reload the latest document before saving again.`,
-    'workspace.folderHint': 'This folder is part of the document tree. Select a child document to read or edit content, or create a new item beneath this folder.',
-    'workspace.folderMoveHint': 'Folders can also be moved into other folders, and their child documents move with them.',
-    'workspace.uploadHint': 'Drag images into the editor or use the toolbar image action. Use the Write / Preview tabs while editing to inspect the rendered result.',
-    'workspace.pickDocument': 'Pick a document from the tree to start reading or editing.',
+    'workspace.folderHint':
+      'This folder is part of the document tree. Select a child document to read or edit content, or create a new item beneath this folder.',
+    'workspace.folderMoveHint':
+      'Folders can also be moved into other folders, and their child documents move with them.',
+    'workspace.uploadHint':
+      'Drag images into the editor or use the toolbar image action. Use the Write / Preview tabs while editing to inspect the rendered result.',
+    'workspace.pickDocument':
+      'Pick a document from the tree to start reading or editing.',
     'audit.kicker': 'Audit',
     'audit.activity': ({ name }) => `${name} activity`,
     'audit.back': 'Back To Workspace',
@@ -344,15 +436,18 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'audit.ip': ({ ip }) => `IP: ${ip}`,
     'audit.ua': ({ userAgent }) => `UA: ${userAgent}`,
     'audit.noLogs': 'No audit logs matched the current filters.',
-    'audit.pageSummary': ({ page, total }) => `Page ${page} · ${total} total records`,
+    'audit.pageSummary': ({ page, total }) =>
+      `Page ${page} · ${total} total records`,
     'audit.previous': 'Previous',
     'audit.next': 'Next',
     'adminUsers.kicker': 'User Admin',
     'adminUsers.title': 'Account Management',
-    'adminUsers.summary': 'System admins can create accounts and grant admin privileges here.',
+    'adminUsers.summary':
+      'System admins can create accounts and grant admin privileges here.',
     'adminUsers.backHome': 'Back Home',
     'adminUsers.createTitle': 'Create Account',
-    'adminUsers.createHint': 'New accounts can login immediately, and a personal workspace is created automatically.',
+    'adminUsers.createHint':
+      'New accounts can login immediately, and a personal workspace is created automatically.',
     'adminUsers.grantAdmin': 'Grant system admin permission',
     'adminUsers.grantAdminShort': 'Grant Admin',
     'adminUsers.revokeAdmin': 'Revoke Admin',
@@ -365,14 +460,21 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'adminUsers.deleteConfirm': ({ username }) =>
       `Delete account ${username}? This action cannot be undone.`,
     'adminUsers.createSubmit': 'Create Account',
-    'adminUsers.createSuccess': ({ username }) => `Account ${username} created.`,
+    'adminUsers.createSuccess': ({ username }) =>
+      `Account ${username} created.`,
     'adminUsers.createFailed': 'Unable to create account right now.',
-    'adminUsers.enableSuccess': ({ username }) => `Account ${username} enabled.`,
-    'adminUsers.disableSuccess': ({ username }) => `Account ${username} disabled.`,
-    'adminUsers.grantAdminSuccess': ({ username }) => `Account ${username} is now a system admin.`,
-    'adminUsers.revokeAdminSuccess': ({ username }) => `System admin permission removed for ${username}.`,
-    'adminUsers.resetPasswordSuccess': ({ username }) => `Password reset for ${username}.`,
-    'adminUsers.deleteSuccess': ({ username }) => `Account ${username} deleted.`,
+    'adminUsers.enableSuccess': ({ username }) =>
+      `Account ${username} enabled.`,
+    'adminUsers.disableSuccess': ({ username }) =>
+      `Account ${username} disabled.`,
+    'adminUsers.grantAdminSuccess': ({ username }) =>
+      `Account ${username} is now a system admin.`,
+    'adminUsers.revokeAdminSuccess': ({ username }) =>
+      `System admin permission removed for ${username}.`,
+    'adminUsers.resetPasswordSuccess': ({ username }) =>
+      `Password reset for ${username}.`,
+    'adminUsers.deleteSuccess': ({ username }) =>
+      `Account ${username} deleted.`,
     'adminUsers.actionFailed': 'Unable to update this account right now.',
     'adminUsers.listTitle': 'User List',
     'adminUsers.currentUser': 'Current account',
@@ -425,7 +527,9 @@ export function useAppLocale() {
     return t(`role.${role ?? 'guest'}`)
   }
 
-  function visibilityLabel(visibility: 'private' | 'public' | 'team' | null | undefined) {
+  function visibilityLabel(
+    visibility: 'private' | 'public' | 'team' | null | undefined
+  ) {
     return t(`visibility.${visibility ?? 'unknown'}`)
   }
 

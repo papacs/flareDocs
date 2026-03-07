@@ -1,6 +1,6 @@
 import { and, eq, sql } from 'drizzle-orm'
 
-import { documents } from '../../../../../../../db/schema'
+import { documents, users } from '../../../../../../../db/schema'
 import { queueAuditLog } from '../../../../../utils/audit'
 import { getAuthenticatedUser } from '../../../../../utils/auth'
 import { getDb } from '../../../../../utils/db'
@@ -25,7 +25,12 @@ export default defineEventHandler(async (event) => {
   const docId = getNumericRouteParam(event, 'docId')
 
   if (!spaceId || !docId) {
-    return apiError(event, 422, 'INVALID_ROUTE_PARAMS', 'Space id and document id must be positive integers.')
+    return apiError(
+      event,
+      422,
+      'INVALID_ROUTE_PARAMS',
+      'Space id and document id must be positive integers.'
+    )
   }
 
   const user = await getAuthenticatedUser(event)
@@ -38,7 +43,12 @@ export default defineEventHandler(async (event) => {
       return apiError(event, error.statusCode, error.code, error.message)
     }
 
-    return apiError(event, 500, 'SPACE_PERMISSION_FAILED', 'Unable to verify space access.')
+    return apiError(
+      event,
+      500,
+      'SPACE_PERMISSION_FAILED',
+      'Unable to verify space access.'
+    )
   }
 
   const existingDocument = await getSpaceDocument(db, spaceId, docId)
@@ -50,7 +60,12 @@ export default defineEventHandler(async (event) => {
   const body = await readBody<UpdateDocumentBody>(event)
 
   if (!Number.isInteger(body.version)) {
-    return apiError(event, 422, 'INVALID_DOCUMENT_VERSION', 'Document updates must include an integer version.')
+    return apiError(
+      event,
+      422,
+      'INVALID_DOCUMENT_VERSION',
+      'Document updates must include an integer version.'
+    )
   }
 
   const documentVersion = Number(body.version)
@@ -60,19 +75,37 @@ export default defineEventHandler(async (event) => {
     body.content === undefined &&
     body.parentId === undefined
   ) {
-    return apiError(event, 422, 'EMPTY_DOCUMENT_UPDATE', 'At least one document field must be updated.')
+    return apiError(
+      event,
+      422,
+      'EMPTY_DOCUMENT_UPDATE',
+      'At least one document field must be updated.'
+    )
   }
 
-  const nextTitle = body.title === undefined ? existingDocument.title : body.title.trim()
-  const nextContent = body.content === undefined ? existingDocument.content : body.content
-  const nextParentId = body.parentId === undefined ? existingDocument.parentId : body.parentId
+  const nextTitle =
+    body.title === undefined ? existingDocument.title : body.title.trim()
+  const nextContent =
+    body.content === undefined ? existingDocument.content : body.content
+  const nextParentId =
+    body.parentId === undefined ? existingDocument.parentId : body.parentId
 
   if (nextTitle.length < 1 || nextTitle.length > 200) {
-    return apiError(event, 422, 'INVALID_DOCUMENT_TITLE', 'Document title must be between 1 and 200 characters.')
+    return apiError(
+      event,
+      422,
+      'INVALID_DOCUMENT_TITLE',
+      'Document title must be between 1 and 200 characters.'
+    )
   }
 
   if (nextParentId === docId) {
-    return apiError(event, 422, 'DOCUMENT_PARENT_SELF', 'A document cannot be its own parent.')
+    return apiError(
+      event,
+      422,
+      'DOCUMENT_PARENT_SELF',
+      'A document cannot be its own parent.'
+    )
   }
 
   const parentResult = await ensureParentFolder(db, spaceId, nextParentId)
@@ -82,7 +115,12 @@ export default defineEventHandler(async (event) => {
   }
 
   if (await createsDocumentCycle(db, spaceId, docId, nextParentId)) {
-    return apiError(event, 422, 'DOCUMENT_CYCLE', 'This move would create a document tree cycle.')
+    return apiError(
+      event,
+      422,
+      'DOCUMENT_CYCLE',
+      'This move would create a document tree cycle.'
+    )
   }
 
   const updatedRows = await db
@@ -117,14 +155,20 @@ export default defineEventHandler(async (event) => {
   if (!updatedDocument) {
     const currentDocument = await getSpaceDocument(db, spaceId, docId)
 
-    return apiError(event, 409, 'DOCUMENT_VERSION_CONFLICT', 'Document update conflict detected.', {
-      current: currentDocument
-        ? {
-            version: currentDocument.version,
-            updatedAt: currentDocument.updatedAt
-          }
-        : null
-    })
+    return apiError(
+      event,
+      409,
+      'DOCUMENT_VERSION_CONFLICT',
+      'Document update conflict detected.',
+      {
+        current: currentDocument
+          ? {
+              version: currentDocument.version,
+              updatedAt: currentDocument.updatedAt
+            }
+          : null
+      }
+    )
   }
 
   queueAuditLog(event, {
@@ -140,7 +184,26 @@ export default defineEventHandler(async (event) => {
     }
   })
 
+  let createdByName: string | null = null
+
+  if (existingDocument.createdBy) {
+    const [createdByUser] = await db
+      .select({
+        username: users.username
+      })
+      .from(users)
+      .where(eq(users.id, existingDocument.createdBy))
+      .limit(1)
+
+    createdByName = createdByUser?.username ?? null
+  }
+
   return ok({
-    document: updatedDocument
+    document: {
+      ...updatedDocument,
+      createdAt: existingDocument.createdAt,
+      createdByName,
+      updatedByName: user?.username ?? null
+    }
   })
 })

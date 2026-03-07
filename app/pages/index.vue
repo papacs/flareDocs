@@ -11,7 +11,9 @@ import { FetchError } from 'ofetch'
 const { t, visibilityLabel } = useAppLocale()
 const { appearance, setAppearance } = useAppearance()
 const githubRepoUrl = 'https://github.com/papacs/flareDocs'
-const cookieHeaders = import.meta.server ? useRequestHeaders(['cookie']) : undefined
+const cookieHeaders = import.meta.server
+  ? useRequestHeaders(['cookie'])
+  : undefined
 const recentSpaceStorageKey = 'fd-recent-space-id'
 const unauthenticatedUserResponse: ApiResponse<{ user: AuthUser }> = {
   ok: false,
@@ -21,13 +23,12 @@ const unauthenticatedUserResponse: ApiResponse<{ user: AuthUser }> = {
   }
 }
 
-const {
-  data: meResponse,
-  refresh: refreshMe
-} = await useAsyncData('auth-me', () =>
-  $fetch<ApiResponse<{ user: AuthUser }>>('/api/auth/me', {
-    headers: cookieHeaders
-  }).catch(() => unauthenticatedUserResponse)
+const { data: meResponse, refresh: refreshMe } = await useAsyncData(
+  'auth-me',
+  () =>
+    $fetch<ApiResponse<{ user: AuthUser }>>('/api/auth/me', {
+      headers: cookieHeaders
+    }).catch(() => unauthenticatedUserResponse)
 )
 
 const {
@@ -40,11 +41,17 @@ const {
   })
 )
 
-const currentUser = computed(() => (meResponse.value?.ok ? meResponse.value.data.user : null))
-const spaces = computed(() =>
-  spacesResponse.value && spacesResponse.value.ok ? spacesResponse.value.data.spaces : []
+const currentUser = computed(() =>
+  meResponse.value?.ok ? meResponse.value.data.user : null
 )
-const personalWorkspace = computed(() => spaces.value.find((space) => space.isPersonal) ?? null)
+const spaces = computed(() =>
+  spacesResponse.value && spacesResponse.value.ok
+    ? spacesResponse.value.data.spaces
+    : []
+)
+const personalWorkspace = computed(
+  () => spaces.value.find((space) => space.isPersonal) ?? null
+)
 const recentSpaceId = ref<number | null>(null)
 const preferredWorkspace = computed(() => {
   if (recentSpaceId.value) {
@@ -57,10 +64,18 @@ const preferredWorkspace = computed(() => {
 
   return personalWorkspace.value ?? spaces.value[0] ?? null
 })
-const publicSpacesCount = computed(() => spaces.value.filter((space) => space.visibility === 'public').length)
-const teamSpacesCount = computed(() => spaces.value.filter((space) => space.visibility === 'team').length)
+const publicSpacesCount = computed(
+  () => spaces.value.filter((space) => space.visibility === 'public').length
+)
+const teamSpacesCount = computed(
+  () => spaces.value.filter((space) => space.visibility === 'team').length
+)
+const privateSpacesCount = computed(
+  () => spaces.value.filter((space) => space.visibility === 'private').length
+)
 const deleteSpaceTarget = computed(
-  () => spaces.value.find((space) => space.id === deleteSpaceTargetId.value) ?? null
+  () =>
+    spaces.value.find((space) => space.id === deleteSpaceTargetId.value) ?? null
 )
 
 const createForm = reactive({
@@ -74,7 +89,9 @@ const visibilityOptions = computed(() => [
 ])
 const normalizedSpaceName = computed(() => createForm.name.trim())
 const isCreateFormValid = computed(
-  () => normalizedSpaceName.value.length >= 2 && normalizedSpaceName.value.length <= 64
+  () =>
+    normalizedSpaceName.value.length >= 2 &&
+    normalizedSpaceName.value.length <= 64
 )
 
 const createError = ref('')
@@ -126,7 +143,8 @@ function readRecentSpaceId() {
 
   const storedValue = window.localStorage.getItem(recentSpaceStorageKey)
   const parsedValue = storedValue ? Number(storedValue) : NaN
-  recentSpaceId.value = Number.isInteger(parsedValue) && parsedValue > 0 ? parsedValue : null
+  recentSpaceId.value =
+    Number.isInteger(parsedValue) && parsedValue > 0 ? parsedValue : null
 }
 
 onMounted(() => {
@@ -159,7 +177,8 @@ function readApiErrorMessage(payload: unknown) {
     return null
   }
 
-  const maybeError = (payload as { error?: { message?: string }; ok?: boolean }).error?.message
+  const maybeError = (payload as { error?: { message?: string }; ok?: boolean })
+    .error?.message
   return typeof maybeError === 'string' ? maybeError : null
 }
 
@@ -194,15 +213,14 @@ async function confirmDeleteSpace(space: SpaceSummary) {
   deleteSpaceError.value = ''
 
   try {
-    const response = await $fetch<ApiResponse<{ deleted: boolean; spaceId: number }>>(
-      `/api/spaces/${space.id}`,
-      {
-        method: 'DELETE',
-        body: {
-          confirmName: space.name
-        }
+    const response = await $fetch<
+      ApiResponse<{ deleted: boolean; spaceId: number }>
+    >(`/api/spaces/${space.id}`, {
+      method: 'DELETE',
+      body: {
+        confirmName: space.name
       }
-    )
+    })
 
     if (!response.ok) {
       deleteSpaceError.value = response.error.message
@@ -224,7 +242,8 @@ async function confirmDeleteSpace(space: SpaceSummary) {
       const errorMessage = readApiErrorMessage(error.data)
       deleteSpaceError.value = errorMessage ?? t('index.deleteSpaceFailed')
     } else {
-      deleteSpaceError.value = error instanceof Error ? error.message : t('index.deleteSpaceFailed')
+      deleteSpaceError.value =
+        error instanceof Error ? error.message : t('index.deleteSpaceFailed')
     }
   } finally {
     deleteSpacePendingId.value = null
@@ -241,13 +260,16 @@ async function createSpace() {
   createError.value = ''
 
   try {
-    const response = await $fetch<ApiResponse<{ space: { id: number } }>>('/api/spaces', {
-      method: 'POST',
-      body: {
-        name: normalizedSpaceName.value,
-        visibility: createForm.visibility
+    const response = await $fetch<ApiResponse<{ space: { id: number } }>>(
+      '/api/spaces',
+      {
+        method: 'POST',
+        body: {
+          name: normalizedSpaceName.value,
+          visibility: createForm.visibility
+        }
       }
-    })
+    )
 
     createForm.name = ''
     await refreshSpaces()
@@ -260,7 +282,8 @@ async function createSpace() {
       const errorMessage = readApiErrorMessage(error.data)
       createError.value = errorMessage ?? t('index.createSpaceFailed')
     } else {
-      createError.value = error instanceof Error ? error.message : t('index.createSpaceFailed')
+      createError.value =
+        error instanceof Error ? error.message : t('index.createSpaceFailed')
     }
   } finally {
     createPending.value = false
@@ -304,10 +327,13 @@ async function saveProfile() {
       body.newPassword = profileForm.newPassword
     }
 
-    const response = await $fetch<ApiResponse<{ user: AuthUser }>>('/api/auth/profile', {
-      method: 'PATCH',
-      body
-    })
+    const response = await $fetch<ApiResponse<{ user: AuthUser }>>(
+      '/api/auth/profile',
+      {
+        method: 'PATCH',
+        body
+      }
+    )
 
     if (!response.ok) {
       profileError.value = response.error.message
@@ -323,7 +349,8 @@ async function saveProfile() {
       const errorMessage = readApiErrorMessage(error.data)
       profileError.value = errorMessage ?? t('index.profileSaveFailed')
     } else {
-      profileError.value = error instanceof Error ? error.message : t('index.profileSaveFailed')
+      profileError.value =
+        error instanceof Error ? error.message : t('index.profileSaveFailed')
     }
   } finally {
     profilePending.value = false
@@ -346,7 +373,9 @@ async function saveProfile() {
         @click.stop
       >
         <div class="flex items-center justify-between gap-3">
-          <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+          <p
+            class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500"
+          >
             {{ t('index.profileSettings') }}
           </p>
           <UButton
@@ -363,10 +392,18 @@ async function saveProfile() {
         </div>
 
         <form class="mt-4 space-y-3" @submit.prevent="saveProfile">
-          <p class="text-sm font-medium text-slate-700">{{ t('index.profilePanelHint') }}</p>
+          <p class="text-sm font-medium text-slate-700">
+            {{ t('index.profilePanelHint') }}
+          </p>
 
-          <div class="space-y-2 rounded-2xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.76)] p-3">
-            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{{ t('index.appearance') }}</p>
+          <div
+            class="space-y-2 rounded-2xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.76)] p-3"
+          >
+            <p
+              class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"
+            >
+              {{ t('index.appearance') }}
+            </p>
             <div class="grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -385,7 +422,9 @@ async function saveProfile() {
                 {{ t('index.appearanceDark') }}
               </button>
             </div>
-            <p class="text-xs leading-5 text-slate-500">{{ t('index.appearanceHint') }}</p>
+            <p class="text-xs leading-5 text-slate-500">
+              {{ t('index.appearanceHint') }}
+            </p>
           </div>
 
           <div class="grid grid-cols-4 gap-2">
@@ -405,7 +444,9 @@ async function saveProfile() {
               <span class="text-lg leading-none">
                 {{ getAvatarPresetMeta(avatarId).symbol }}
               </span>
-              <span class="mt-1 block text-[11px] font-semibold tracking-[0.03em]">
+              <span
+                class="mt-1 block text-[11px] font-semibold tracking-[0.03em]"
+              >
                 {{ getAvatarPresetMeta(avatarId).zhName }}
               </span>
             </button>
@@ -428,9 +469,15 @@ async function saveProfile() {
             />
           </div>
 
-          <p class="text-xs leading-5 text-slate-500">{{ t('index.passwordHint') }}</p>
-          <p v-if="profileError" class="text-sm text-rose-600">{{ profileError }}</p>
-          <p v-if="profileMessage" class="text-sm text-emerald-700">{{ profileMessage }}</p>
+          <p class="text-xs leading-5 text-slate-500">
+            {{ t('index.passwordHint') }}
+          </p>
+          <p v-if="profileError" class="text-sm text-rose-600">
+            {{ profileError }}
+          </p>
+          <p v-if="profileMessage" class="text-sm text-emerald-700">
+            {{ profileMessage }}
+          </p>
 
           <div class="flex justify-end">
             <UButton type="submit" color="neutral" :loading="profilePending">
@@ -444,7 +491,9 @@ async function saveProfile() {
     <section
       class="overflow-hidden rounded-[2rem] border border-[rgba(31,41,55,0.1)] bg-[linear-gradient(135deg,rgba(255,251,244,0.96),rgba(244,237,227,0.88))] shadow-[0_24px_56px_rgba(120,98,69,0.12)]"
     >
-      <div class="grid gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1.12fr)_minmax(22rem,0.88fr)] lg:p-9">
+      <div
+        class="grid gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1.12fr)_minmax(22rem,0.88fr)] lg:p-9"
+      >
         <div class="flex flex-col justify-between">
           <div>
             <div class="flex items-center justify-between gap-3">
@@ -498,7 +547,14 @@ async function saveProfile() {
                       <WorkspaceIcon name="logout" class="h-4 w-4" />
                     </UButton>
                   </template>
-                  <UButton v-else color="neutral" variant="ghost" size="sm" class="h-9 px-3" to="/login">
+                  <UButton
+                    v-else
+                    color="neutral"
+                    variant="ghost"
+                    size="sm"
+                    class="h-9 px-3"
+                    to="/login"
+                  >
                     {{ t('index.loginOnly') }}
                   </UButton>
                 </div>
@@ -509,7 +565,9 @@ async function saveProfile() {
             >
               {{ t('index.title') }}
             </h1>
-            <p class="mt-4 max-w-2xl text-base leading-7 text-slate-500 sm:text-lg">
+            <p
+              class="mt-4 max-w-2xl text-base leading-7 text-slate-500 sm:text-lg"
+            >
               {{ t('index.summary') }}
             </p>
 
@@ -518,7 +576,11 @@ async function saveProfile() {
                 <UButton
                   size="lg"
                   color="neutral"
-                  :to="preferredWorkspace ? `/spaces/${preferredWorkspace.id}` : undefined"
+                  :to="
+                    preferredWorkspace
+                      ? `/spaces/${preferredWorkspace.id}`
+                      : undefined
+                  "
                 >
                   {{ t('index.openWorkspace') }}
                 </UButton>
@@ -536,23 +598,61 @@ async function saveProfile() {
             </div>
           </div>
 
-          <div class="mt-8 grid gap-3 sm:grid-cols-3">
-            <article class="rounded-[1.4rem] border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.66)] p-4 backdrop-blur">
-              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{{ t('index.metricSpaces') }}</p>
-              <p class="mt-3 text-3xl font-semibold text-slate-800">{{ spaces.length }}</p>
+          <div class="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <article
+              class="rounded-[1.4rem] border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.66)] p-4 backdrop-blur"
+            >
+              <p
+                class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"
+              >
+                {{ t('index.metricSpaces') }}
+              </p>
+              <p class="mt-3 text-3xl font-semibold text-slate-800">
+                {{ spaces.length }}
+              </p>
             </article>
-            <article class="rounded-[1.4rem] border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.66)] p-4 backdrop-blur">
-              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{{ t('index.metricTeam') }}</p>
-              <p class="mt-3 text-3xl font-semibold text-slate-800">{{ teamSpacesCount }}</p>
+            <article
+              class="rounded-[1.4rem] border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.66)] p-4 backdrop-blur"
+            >
+              <p
+                class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"
+              >
+                {{ t('index.metricPrivate') }}
+              </p>
+              <p class="mt-3 text-3xl font-semibold text-slate-800">
+                {{ privateSpacesCount }}
+              </p>
             </article>
-            <article class="rounded-[1.4rem] border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.66)] p-4 backdrop-blur">
-              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{{ t('index.metricPublic') }}</p>
-              <p class="mt-3 text-3xl font-semibold text-slate-800">{{ publicSpacesCount }}</p>
+            <article
+              class="rounded-[1.4rem] border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.66)] p-4 backdrop-blur"
+            >
+              <p
+                class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"
+              >
+                {{ t('index.metricTeam') }}
+              </p>
+              <p class="mt-3 text-3xl font-semibold text-slate-800">
+                {{ teamSpacesCount }}
+              </p>
+            </article>
+            <article
+              class="rounded-[1.4rem] border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.66)] p-4 backdrop-blur"
+            >
+              <p
+                class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"
+              >
+                {{ t('index.metricPublic') }}
+              </p>
+              <p class="mt-3 text-3xl font-semibold text-slate-800">
+                {{ publicSpacesCount }}
+              </p>
             </article>
           </div>
         </div>
 
-        <div class="fd-home-session rounded-[1.75rem] border border-[rgba(31,41,55,0.08)] bg-[rgba(248,244,236,0.82)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] backdrop-blur sm:p-5">
+        <div
+          class="fd-home-session hidden rounded-[1.75rem] border border-[rgba(31,41,55,0.08)] bg-[rgba(248,244,236,0.82)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] backdrop-blur sm:block sm:p-5"
+        >
           <div class="flex flex-wrap items-start justify-between gap-3">
             <div class="flex items-center gap-3">
               <span
@@ -563,15 +663,23 @@ async function saveProfile() {
               </span>
               <div>
                 <h2 class="mt-1 text-2xl font-semibold text-slate-800">
-                  {{ currentUser ? currentUser.username : t('index.guestMode') }}
+                  {{
+                    currentUser ? currentUser.username : t('index.guestMode')
+                  }}
                 </h2>
-                <p v-if="currentUser?.isSystemAdmin" class="text-xs font-medium text-amber-700">
+                <p
+                  v-if="currentUser?.isSystemAdmin"
+                  class="text-xs font-medium text-amber-700"
+                >
                   {{ t('index.systemAdmin') }}
                 </p>
               </div>
             </div>
 
-            <div v-if="currentUser" class="hidden flex-wrap items-center justify-end gap-2 sm:flex">
+            <div
+              v-if="currentUser"
+              class="hidden flex-wrap items-center justify-end gap-2 sm:flex"
+            >
               <UButton
                 color="neutral"
                 variant="ghost"
@@ -608,7 +716,9 @@ async function saveProfile() {
           </div>
 
           <div class="mt-5 space-y-4">
-            <div class="rounded-2xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,250,243,0.88)] p-4 text-sm leading-6 text-slate-600">
+            <div
+              class="rounded-2xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,250,243,0.88)] p-4 text-sm leading-6 text-slate-600"
+            >
               <p v-if="currentUser">
                 {{ t('index.loggedInHint') }}
               </p>
@@ -622,10 +732,18 @@ async function saveProfile() {
               class="hidden space-y-3 rounded-2xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.72)] p-4 sm:block"
               @submit.prevent="saveProfile"
             >
-              <p class="text-sm font-medium text-slate-700">{{ t('index.profilePanelHint') }}</p>
+              <p class="text-sm font-medium text-slate-700">
+                {{ t('index.profilePanelHint') }}
+              </p>
 
-              <div class="space-y-2 rounded-2xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.76)] p-3">
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{{ t('index.appearance') }}</p>
+              <div
+                class="space-y-2 rounded-2xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.76)] p-3"
+              >
+                <p
+                  class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"
+                >
+                  {{ t('index.appearance') }}
+                </p>
                 <div class="grid grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -644,7 +762,9 @@ async function saveProfile() {
                     {{ t('index.appearanceDark') }}
                   </button>
                 </div>
-                <p class="text-xs leading-5 text-slate-500">{{ t('index.appearanceHint') }}</p>
+                <p class="text-xs leading-5 text-slate-500">
+                  {{ t('index.appearanceHint') }}
+                </p>
               </div>
 
               <div class="grid grid-cols-4 gap-2">
@@ -664,7 +784,9 @@ async function saveProfile() {
                   <span class="text-lg leading-none">
                     {{ getAvatarPresetMeta(avatarId).symbol }}
                   </span>
-                  <span class="mt-1 block text-[11px] font-semibold tracking-[0.03em]">
+                  <span
+                    class="mt-1 block text-[11px] font-semibold tracking-[0.03em]"
+                  >
                     {{ getAvatarPresetMeta(avatarId).zhName }}
                   </span>
                 </button>
@@ -687,20 +809,38 @@ async function saveProfile() {
                 />
               </div>
 
-              <p class="text-xs leading-5 text-slate-500">{{ t('index.passwordHint') }}</p>
-              <p v-if="profileError" class="text-sm text-rose-600">{{ profileError }}</p>
-              <p v-if="profileMessage" class="text-sm text-emerald-700">{{ profileMessage }}</p>
+              <p class="text-xs leading-5 text-slate-500">
+                {{ t('index.passwordHint') }}
+              </p>
+              <p v-if="profileError" class="text-sm text-rose-600">
+                {{ profileError }}
+              </p>
+              <p v-if="profileMessage" class="text-sm text-emerald-700">
+                {{ profileMessage }}
+              </p>
 
               <div class="flex justify-end">
-                <UButton type="submit" color="neutral" :loading="profilePending">
+                <UButton
+                  type="submit"
+                  color="neutral"
+                  :loading="profilePending"
+                >
                   {{ t('index.saveProfile') }}
                 </UButton>
               </div>
             </form>
 
-            <form v-if="currentUser" class="space-y-3" @submit.prevent="createSpace">
+            <form
+              v-if="currentUser"
+              class="space-y-3"
+              @submit.prevent="createSpace"
+            >
               <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem]">
-                <UInput v-model="createForm.name" size="xl" :placeholder="t('index.newSpaceName')" />
+                <UInput
+                  v-model="createForm.name"
+                  size="xl"
+                  :placeholder="t('index.newSpaceName')"
+                />
                 <AppSelectMenu
                   v-model="createForm.visibility"
                   :options="visibilityOptions"
@@ -708,7 +848,9 @@ async function saveProfile() {
                 />
               </div>
 
-              <div class="rounded-2xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.62)] px-4 py-3">
+              <div
+                class="rounded-2xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.62)] px-4 py-3"
+              >
                 <p class="text-sm leading-6 text-slate-600">
                   {{ t('index.personalWorkspaceHint') }}
                 </p>
@@ -717,10 +859,14 @@ async function saveProfile() {
               <p class="text-sm leading-6 text-slate-500">
                 {{ t('index.spaceNameRule') }}
               </p>
-              <p v-if="createError" class="text-sm text-rose-600">{{ createError }}</p>
+              <p v-if="createError" class="text-sm text-rose-600">
+                {{ createError }}
+              </p>
 
               <div class="flex items-center justify-between gap-3">
-                <p class="text-xs uppercase tracking-[0.18em] text-slate-400">{{ t('index.quickCreate') }}</p>
+                <p class="text-xs uppercase tracking-[0.18em] text-slate-400">
+                  {{ t('index.quickCreate') }}
+                </p>
                 <UButton
                   type="submit"
                   size="xl"
@@ -738,26 +884,44 @@ async function saveProfile() {
               class="flex min-h-[16rem] flex-col justify-between rounded-2xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.72)] p-4"
             >
               <div>
-                <p class="text-sm font-semibold text-slate-700">{{ t('index.guestPanelTitle') }}</p>
+                <p class="text-sm font-semibold text-slate-700">
+                  {{ t('index.guestPanelTitle') }}
+                </p>
                 <p class="mt-2 text-sm leading-6 text-slate-500">
-                  {{ t('index.guestPanelSummary', { count: publicSpacesCount }) }}
+                  {{
+                    t('index.guestPanelSummary', { count: publicSpacesCount })
+                  }}
                 </p>
 
                 <div class="mt-4 space-y-2">
-                  <p class="fd-guest-feature-pill rounded-xl bg-[rgba(248,244,236,0.8)] px-3 py-2 text-xs text-slate-600">
+                  <p
+                    class="fd-guest-feature-pill rounded-xl bg-[rgba(248,244,236,0.8)] px-3 py-2 text-xs text-slate-600"
+                  >
                     {{ t('index.guestPanelFeatureRead') }}
                   </p>
-                  <p class="fd-guest-feature-pill rounded-xl bg-[rgba(248,244,236,0.8)] px-3 py-2 text-xs text-slate-600">
+                  <p
+                    class="fd-guest-feature-pill rounded-xl bg-[rgba(248,244,236,0.8)] px-3 py-2 text-xs text-slate-600"
+                  >
                     {{ t('index.guestPanelFeatureManage') }}
                   </p>
-                  <p class="fd-guest-feature-pill rounded-xl bg-[rgba(248,244,236,0.8)] px-3 py-2 text-xs text-slate-600">
+                  <p
+                    class="fd-guest-feature-pill rounded-xl bg-[rgba(248,244,236,0.8)] px-3 py-2 text-xs text-slate-600"
+                  >
                     {{ t('index.guestPanelFeaturePrivate') }}
                   </p>
                 </div>
               </div>
 
-              <div class="mt-5 flex flex-wrap items-center justify-between gap-2">
-                <UButton class="fd-guest-login-button" size="lg" color="neutral" to="/login">{{ t('index.loginOnly') }}</UButton>
+              <div
+                class="mt-5 flex flex-wrap items-center justify-between gap-2"
+              >
+                <UButton
+                  class="fd-guest-login-button"
+                  size="lg"
+                  color="neutral"
+                  to="/login"
+                  >{{ t('index.loginOnly') }}</UButton
+                >
               </div>
             </div>
           </div>
@@ -765,7 +929,10 @@ async function saveProfile() {
       </div>
     </section>
 
-    <section id="spaces-list" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <section
+      id="spaces-list"
+      class="hidden gap-4 sm:grid md:grid-cols-2 xl:grid-cols-3"
+    >
       <article
         v-for="space in spaces"
         :key="space.id"
@@ -773,10 +940,14 @@ async function saveProfile() {
       >
         <div class="flex items-start justify-between gap-3">
           <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
+            <p
+              class="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700"
+            >
               {{ visibilityLabel(space.visibility) }}
             </p>
-            <h2 class="mt-3 text-2xl font-semibold text-slate-800">{{ space.name }}</h2>
+            <h2 class="mt-3 text-2xl font-semibold text-slate-800">
+              {{ space.name }}
+            </h2>
           </div>
           <div class="flex items-center gap-2">
             <NuxtLink
@@ -805,7 +976,9 @@ async function saveProfile() {
         v-if="spacesStatus !== 'pending' && spaces.length === 0"
         class="rounded-[1.8rem] border border-dashed border-[rgba(31,41,55,0.18)] bg-[rgba(255,251,245,0.72)] p-6 text-slate-500 md:col-span-2 xl:col-span-3"
       >
-        <h2 class="text-2xl font-semibold text-slate-800">{{ t('index.noSpaces') }}</h2>
+        <h2 class="text-2xl font-semibold text-slate-800">
+          {{ t('index.noSpaces') }}
+        </h2>
         <p class="mt-3 max-w-2xl text-sm leading-6">
           {{ t('index.noSpacesHint') }}
         </p>
@@ -826,13 +999,25 @@ async function saveProfile() {
         @click="cancelDeleteSpace"
       />
       <div class="fd-space-delete-modal">
-        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-rose-600">{{ t('index.deleteSpace') }}</p>
+        <p
+          class="text-xs font-semibold uppercase tracking-[0.2em] text-rose-600"
+        >
+          {{ t('index.deleteSpace') }}
+        </p>
         <h3 class="mt-2 text-xl font-semibold text-slate-800">
-          {{ t('index.deleteSpaceModalTitle', { name: deleteSpaceTarget.name }) }}
+          {{
+            t('index.deleteSpaceModalTitle', { name: deleteSpaceTarget.name })
+          }}
         </h3>
-        <p class="mt-3 text-sm leading-6 text-slate-600">{{ t('index.deleteSpaceModalHint') }}</p>
-        <p class="mt-2 text-sm leading-6 text-slate-600">{{ t('index.deleteSpaceModalCascade') }}</p>
-        <p v-if="deleteSpaceError" class="mt-3 text-sm text-rose-600">{{ deleteSpaceError }}</p>
+        <p class="mt-3 text-sm leading-6 text-slate-600">
+          {{ t('index.deleteSpaceModalHint') }}
+        </p>
+        <p class="mt-2 text-sm leading-6 text-slate-600">
+          {{ t('index.deleteSpaceModalCascade') }}
+        </p>
+        <p v-if="deleteSpaceError" class="mt-3 text-sm text-rose-600">
+          {{ deleteSpaceError }}
+        </p>
         <div class="mt-5 flex items-center justify-end gap-2">
           <UButton color="neutral" variant="ghost" @click="cancelDeleteSpace">
             {{ t('common.cancel') }}

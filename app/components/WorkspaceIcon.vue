@@ -16,6 +16,7 @@ defineProps<{
     | 'fullscreen'
     | 'github'
     | 'home'
+    | 'info'
     | 'markdown'
     | 'move'
     | 'pdf'
@@ -54,7 +55,9 @@ defineProps<{
     stroke-linejoin="round"
     aria-hidden="true"
   >
-    <path d="M6.5 5.5h11A1.5 1.5 0 0 1 19 7v10a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 17V7a1.5 1.5 0 0 1 1.5-1.5Z" />
+    <path
+      d="M6.5 5.5h11A1.5 1.5 0 0 1 19 7v10a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 17V7a1.5 1.5 0 0 1 1.5-1.5Z"
+    />
     <path d="M8.5 9h7" />
     <path d="M8.5 12h7" />
     <path d="M8.5 15h4" />
@@ -110,7 +113,9 @@ defineProps<{
     stroke-linejoin="round"
     aria-hidden="true"
   >
-    <path d="M8 3.5h6l4 4V20a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 20V5A1.5 1.5 0 0 1 7.5 3.5Z" />
+    <path
+      d="M8 3.5h6l4 4V20a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 20V5A1.5 1.5 0 0 1 7.5 3.5Z"
+    />
     <path d="M14 3.5V8h4" />
     <path d="M9 14h6" />
     <path d="M12 11v6" />
@@ -126,7 +131,9 @@ defineProps<{
     stroke-linejoin="round"
     aria-hidden="true"
   >
-    <path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h4l1.8 2H19.5A1.5 1.5 0 0 1 21 9.5v7A1.5 1.5 0 0 1 19.5 18h-15A1.5 1.5 0 0 1 3 16.5Z" />
+    <path
+      d="M3 7.5A1.5 1.5 0 0 1 4.5 6h4l1.8 2H19.5A1.5 1.5 0 0 1 21 9.5v7A1.5 1.5 0 0 1 19.5 18h-15A1.5 1.5 0 0 1 3 16.5Z"
+    />
     <path d="M12 10.5v5" />
     <path d="M9.5 13h5" />
   </svg>
@@ -141,7 +148,9 @@ defineProps<{
     stroke-linejoin="round"
     aria-hidden="true"
   >
-    <path d="M8 3.5h6l4 4V20a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 20V5A1.5 1.5 0 0 1 7.5 3.5Z" />
+    <path
+      d="M8 3.5h6l4 4V20a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 20V5A1.5 1.5 0 0 1 7.5 3.5Z"
+    />
     <path d="M14 3.5V8h4" />
     <path d="M8.5 12.5h7" />
     <path d="M8.5 16h7" />
@@ -157,7 +166,9 @@ defineProps<{
     stroke-linejoin="round"
     aria-hidden="true"
   >
-    <path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h4l1.8 2H19.5A1.5 1.5 0 0 1 21 9.5v7A1.5 1.5 0 0 1 19.5 18h-15A1.5 1.5 0 0 1 3 16.5Z" />
+    <path
+      d="M3 7.5A1.5 1.5 0 0 1 4.5 6h4l1.8 2H19.5A1.5 1.5 0 0 1 21 9.5v7A1.5 1.5 0 0 1 19.5 18h-15A1.5 1.5 0 0 1 3 16.5Z"
+    />
   </svg>
 
   <svg
@@ -170,7 +181,9 @@ defineProps<{
     stroke-linejoin="round"
     aria-hidden="true"
   >
-    <path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h4l1.8 2H19a1.5 1.5 0 0 1 1.44 1.92l-1.36 4.75A1.5 1.5 0 0 1 17.63 17H5a1.5 1.5 0 0 1-1.45-1.88Z" />
+    <path
+      d="M3 8.5A1.5 1.5 0 0 1 4.5 7h4l1.8 2H19a1.5 1.5 0 0 1 1.44 1.92l-1.36 4.75A1.5 1.5 0 0 1 17.63 17H5a1.5 1.5 0 0 1-1.45-1.88Z"
+    />
   </svg>
 
   <svg
@@ -245,7 +258,9 @@ defineProps<{
   >
     <path d="M4.5 7h15" />
     <path d="M9 3.5h6" />
-    <path d="M7 7l1 12.5A1.5 1.5 0 0 0 9.49 21h5.02A1.5 1.5 0 0 0 16 19.5L17 7" />
+    <path
+      d="M7 7l1 12.5A1.5 1.5 0 0 0 9.49 21h5.02A1.5 1.5 0 0 0 16 19.5L17 7"
+    />
     <path d="M10 10.5v6" />
     <path d="M14 10.5v6" />
   </svg>
@@ -286,6 +301,21 @@ defineProps<{
   </svg>
 
   <svg
+    v-else-if="name === 'info'"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M12 10.4v5.1" />
+    <circle cx="12" cy="7.4" r="0.9" fill="currentColor" stroke="none" />
+  </svg>
+
+  <svg
     v-else-if="name === 'markdown'"
     viewBox="0 0 24 24"
     fill="none"
@@ -311,7 +341,9 @@ defineProps<{
     stroke-linejoin="round"
     aria-hidden="true"
   >
-    <path d="M8 3.5h6l4 4V20a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 20V5A1.5 1.5 0 0 1 7.5 3.5Z" />
+    <path
+      d="M8 3.5h6l4 4V20a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 20V5A1.5 1.5 0 0 1 7.5 3.5Z"
+    />
     <path d="M14 3.5V8h4" />
     <path d="M8.5 16.5v-4h1.7a1.3 1.3 0 0 1 0 2.6H8.5" />
     <path d="M13 16.5v-4h1.2a1.7 1.7 0 0 1 0 3.4H13" />
@@ -329,7 +361,9 @@ defineProps<{
     stroke-linejoin="round"
     aria-hidden="true"
   >
-    <path d="M5 4.5h11l3 3V19.5A1.5 1.5 0 0 1 17.5 21h-11A1.5 1.5 0 0 1 5 19.5Z" />
+    <path
+      d="M5 4.5h11l3 3V19.5A1.5 1.5 0 0 1 17.5 21h-11A1.5 1.5 0 0 1 5 19.5Z"
+    />
     <path d="M8 4.5v5h7v-5" />
     <path d="M8 21v-6h8v6" />
   </svg>
@@ -345,7 +379,9 @@ defineProps<{
     aria-hidden="true"
   >
     <circle cx="12" cy="12" r="2.6" />
-    <path d="m12 4 1.6.4.8 1.5 1.7.2 1.3 1.2-.2 1.7 1 1.4-.8 1.6.8 1.6-1 1.4.2 1.7-1.3 1.2-1.7.2-.8 1.5L12 20l-1.6-.4-.8-1.5-1.7-.2-1.3-1.2.2-1.7-1-1.4.8-1.6-.8-1.6 1-1.4-.2-1.7 1.3-1.2 1.7-.2.8-1.5Z" />
+    <path
+      d="m12 4 1.6.4.8 1.5 1.7.2 1.3 1.2-.2 1.7 1 1.4-.8 1.6.8 1.6-1 1.4.2 1.7-1.3 1.2-1.7.2-.8 1.5L12 20l-1.6-.4-.8-1.5-1.7-.2-1.3-1.2.2-1.7-1-1.4.8-1.6-.8-1.6 1-1.4-.2-1.7 1.3-1.2 1.7-.2.8-1.5Z"
+    />
   </svg>
 
   <svg
@@ -389,7 +425,9 @@ defineProps<{
     stroke-linejoin="round"
     aria-hidden="true"
   >
-    <path d="M8 3.5h6l4 4V20a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 20V5A1.5 1.5 0 0 1 7.5 3.5Z" />
+    <path
+      d="M8 3.5h6l4 4V20a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 20V5A1.5 1.5 0 0 1 7.5 3.5Z"
+    />
     <path d="M14 3.5V8h4" />
     <path d="m8.5 12.5 1.3 4 1.2-3 1.2 3 1.3-4" />
     <path d="M15.8 12.5h.2" />

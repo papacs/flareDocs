@@ -23,12 +23,16 @@ type MoveOption = {
 const { t } = useAppLocale()
 const route = useRoute()
 const router = useRouter()
-const requestHeaders = import.meta.server ? useRequestHeaders(['cookie']) : undefined
+const requestHeaders = import.meta.server
+  ? useRequestHeaders(['cookie'])
+  : undefined
 const recentSpaceStorageKey = 'fd-recent-space-id'
 
 const spaceId = computed(() => Number(route.params.spaceId))
 const treeStorageKey = computed(() => `fd-tree-expanded:${spaceId.value}`)
-const selectedDocumentId = ref<number | null>(route.query.doc ? Number(route.query.doc) : null)
+const selectedDocumentId = ref<number | null>(
+  route.query.doc ? Number(route.query.doc) : null
+)
 
 const createNodeMode = ref<'doc' | 'folder' | null>(null)
 const createNodeTitle = ref('')
@@ -41,9 +45,14 @@ const isEditing = ref(false)
 const isRenaming = ref(false)
 const isMovePanelOpen = ref(false)
 const isExportMenuOpen = ref(false)
+const isActionMenuOpen = ref(false)
+const isDocumentInfoOpen = ref(false)
 const isFullscreen = ref(false)
 const isMobileTreeOpen = ref(false)
 const conflictMessage = ref('')
+const saveState = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
+const autoSaveTimer = ref<ReturnType<typeof setTimeout> | null>(null)
+const autoSaveInterval = ref<ReturnType<typeof setInterval> | null>(null)
 const expandedFolderIds = ref<number[]>([])
 const persistedExpandedFolderIds = ref<number[] | null>(null)
 const treeReady = ref(false)
@@ -52,6 +61,9 @@ const documentPanelRef = ref<HTMLElement | null>(null)
 const documentScrollRef = ref<HTMLElement | null>(null)
 const readingProgress = ref(0)
 const editorRenderKey = ref(0)
+
+const autoSaveDebounceMs = 2500
+const autoSaveIntervalMs = 60_000
 
 function syncFullscreenState() {
   if (!import.meta.client) {
@@ -76,17 +88,14 @@ function updateReadingProgress() {
     return
   }
 
-  readingProgress.value = Math.min(100, Math.max(0, (element.scrollTop / maxScroll) * 100))
+  readingProgress.value = Math.min(
+    100,
+    Math.max(0, (element.scrollTop / maxScroll) * 100)
+  )
 }
 
-function jumpToProgress(event: MouseEvent) {
+function jumpToProgress(event: MouseEvent | PointerEvent) {
   if (!import.meta.client) {
-    return
-  }
-
-  const interactiveProgressQuery = window.matchMedia('(hover: hover) and (pointer: fine)')
-
-  if (!interactiveProgressQuery.matches) {
     return
   }
 
@@ -117,9 +126,12 @@ const draft = reactive({
 const { data: spaceResponse } = await useAsyncData(
   () => `workspace-space-${spaceId.value}`,
   () =>
-    $fetch<ApiResponse<{ space: SpaceDetail }>>(`/api/spaces/${spaceId.value}`, {
-      headers: requestHeaders
-    })
+    $fetch<ApiResponse<{ space: SpaceDetail }>>(
+      `/api/spaces/${spaceId.value}`,
+      {
+        headers: requestHeaders
+      }
+    )
 )
 
 const { data: spacesResponse } = await useAsyncData(
@@ -133,21 +145,32 @@ const { data: spacesResponse } = await useAsyncData(
 const { data: treeResponse, refresh: refreshTree } = await useAsyncData(
   () => `workspace-tree-${spaceId.value}`,
   () =>
-    $fetch<ApiResponse<{ documents: DocumentTreeItem[] }>>(`/api/spaces/${spaceId.value}/tree`, {
-      headers: requestHeaders
-    })
+    $fetch<ApiResponse<{ documents: DocumentTreeItem[] }>>(
+      `/api/spaces/${spaceId.value}/tree`,
+      {
+        headers: requestHeaders
+      }
+    )
 )
 
 const space = computed(() =>
-  spaceResponse.value && spaceResponse.value.ok ? spaceResponse.value.data.space : null
+  spaceResponse.value && spaceResponse.value.ok
+    ? spaceResponse.value.data.space
+    : null
 )
 const spaces = computed(() =>
-  spacesResponse.value && spacesResponse.value.ok ? spacesResponse.value.data.spaces : []
+  spacesResponse.value && spacesResponse.value.ok
+    ? spacesResponse.value.data.spaces
+    : []
 )
 const treeItems = computed(() =>
-  treeResponse.value && treeResponse.value.ok ? treeResponse.value.data.documents : []
+  treeResponse.value && treeResponse.value.ok
+    ? treeResponse.value.data.documents
+    : []
 )
-const treeItemMap = computed(() => new Map(treeItems.value.map((item) => [item.id, item])))
+const treeItemMap = computed(
+  () => new Map(treeItems.value.map((item) => [item.id, item]))
+)
 
 const selectedDocument = ref<DocumentDetail | null>(null)
 
@@ -156,7 +179,9 @@ const canEdit = computed(() => {
   return role === 'admin' || role === 'editor'
 })
 
-const isFileDocument = computed(() => Boolean(selectedDocument.value && !selectedDocument.value.isFolder))
+const isFileDocument = computed(() =>
+  Boolean(selectedDocument.value && !selectedDocument.value.isFolder)
+)
 
 function formatTimestamp(value: number | null | undefined) {
   if (!value) {
@@ -192,7 +217,9 @@ const workspaceOptions = computed(() => {
 })
 
 const currentWorkspaceName = computed(
-  () => workspaceOptions.value.find((workspace) => workspace.id === spaceId.value)?.name ?? ''
+  () =>
+    workspaceOptions.value.find((workspace) => workspace.id === spaceId.value)
+      ?.name ?? ''
 )
 
 async function selectWorkspace(nextSpaceId: number) {
@@ -211,7 +238,9 @@ const selectedParentIdForCreate = computed(() => {
     return null
   }
 
-  return selectedDocument.value.isFolder ? selectedDocument.value.id : selectedDocument.value.parentId
+  return selectedDocument.value.isFolder
+    ? selectedDocument.value.id
+    : selectedDocument.value.parentId
 })
 
 const selectedDocumentDescendantIds = computed(() => {
@@ -269,8 +298,6 @@ const selectedPathNodes = computed(() => {
 
   return path
 })
-
-const breadcrumbNodes = computed(() => selectedPathNodes.value.slice(0, -1))
 
 const selectedAncestorIds = computed(() => {
   const ancestors = new Set<number>()
@@ -408,7 +435,10 @@ function persistExpandedFolders() {
     return
   }
 
-  window.localStorage.setItem(treeStorageKey.value, JSON.stringify(expandedFolderIds.value))
+  window.localStorage.setItem(
+    treeStorageKey.value,
+    JSON.stringify(expandedFolderIds.value)
+  )
 }
 
 function expandDocumentPath(documentId: number | null) {
@@ -457,7 +487,11 @@ watch(
 watch(
   spaceId,
   (nextSpaceId) => {
-    if (!import.meta.client || !Number.isInteger(nextSpaceId) || nextSpaceId <= 0) {
+    if (
+      !import.meta.client ||
+      !Number.isInteger(nextSpaceId) ||
+      nextSpaceId <= 0
+    ) {
       return
     }
 
@@ -466,11 +500,11 @@ watch(
   { immediate: true }
 )
 
-
 watch(
   treeItems,
   async (documents) => {
     if (!documents.length) {
+      clearAutoSaveTimer()
       selectedDocumentId.value = null
       selectedDocument.value = null
       expandedFolderIds.value = []
@@ -478,20 +512,32 @@ watch(
       return
     }
 
-    const folderIds = documents.filter((document) => document.isFolder).map((document) => document.id)
+    const folderIds = documents
+      .filter((document) => document.isFolder)
+      .map((document) => document.id)
     const expanded = treeReady.value
       ? new Set(expandedFolderIds.value)
-      : new Set<number>(persistedExpandedFolderIds.value?.length ? persistedExpandedFolderIds.value : folderIds)
+      : new Set<number>(
+          persistedExpandedFolderIds.value?.length
+            ? persistedExpandedFolderIds.value
+            : folderIds
+        )
 
-    expandedFolderIds.value = [...expanded].filter((folderId) => folderIds.includes(folderId))
+    expandedFolderIds.value = [...expanded].filter((folderId) =>
+      folderIds.includes(folderId)
+    )
     treeReady.value = true
 
-    if (
-      !selectedDocumentId.value ||
-      !documents.some((document: DocumentTreeItem) => document.id === selectedDocumentId.value)
-    ) {
-      selectedDocumentId.value =
-        documents.find((document: DocumentTreeItem) => !document.isFolder)?.id ?? documents[0]?.id ?? null
+    const hasSelectedDocument =
+      selectedDocumentId.value &&
+      documents.some(
+        (document: DocumentTreeItem) => document.id === selectedDocumentId.value
+      )
+
+    if (!hasSelectedDocument) {
+      selectedDocumentId.value = null
+      selectedDocument.value = null
+      return
     }
 
     expandDocumentPath(selectedDocumentId.value)
@@ -502,6 +548,8 @@ watch(
 
 watch(selectedDocumentId, async (documentId) => {
   conflictMessage.value = ''
+  clearAutoSaveTimer()
+  isActionMenuOpen.value = false
 
   if (import.meta.client) {
     const nextQuery = { ...route.query }
@@ -530,7 +578,11 @@ watch(selectedDocumentId, async (documentId) => {
 watch(selectedDocument, (document) => {
   isMovePanelOpen.value = false
   isExportMenuOpen.value = false
-  moveTargetParentId.value = document?.parentId ? String(document.parentId) : 'root'
+  isActionMenuOpen.value = false
+  isDocumentInfoOpen.value = false
+  moveTargetParentId.value = document?.parentId
+    ? String(document.parentId)
+    : 'root'
   nextTick(() => {
     if (documentScrollRef.value) {
       documentScrollRef.value.scrollTop = 0
@@ -539,13 +591,31 @@ watch(selectedDocument, (document) => {
   })
 })
 
+watch(
+  [() => draft.title, () => draft.content, isEditing, selectedDocumentId],
+  () => {
+    scheduleAutoSave()
+  }
+)
+
+watch(isActionMenuOpen, (open) => {
+  if (!open) {
+    isExportMenuOpen.value = false
+  }
+})
+
 onMounted(() => {
   if (!import.meta.client) {
     return
   }
 
   document.addEventListener('fullscreenchange', syncFullscreenState)
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+  window.addEventListener('beforeunload', handleBeforeUnload)
   window.addEventListener('keydown', handleWindowKeydown)
+  autoSaveInterval.value = setInterval(() => {
+    void flushAutoSave()
+  }, autoSaveIntervalMs)
   nextTick(() => updateReadingProgress())
 })
 
@@ -555,7 +625,14 @@ onBeforeUnmount(() => {
   }
 
   document.removeEventListener('fullscreenchange', syncFullscreenState)
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+  window.removeEventListener('beforeunload', handleBeforeUnload)
   window.removeEventListener('keydown', handleWindowKeydown)
+  clearAutoSaveTimer()
+  if (autoSaveInterval.value) {
+    clearInterval(autoSaveInterval.value)
+    autoSaveInterval.value = null
+  }
 })
 
 function handleWindowKeydown(event: KeyboardEvent) {
@@ -566,11 +643,126 @@ function handleWindowKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape' && isMobileTreeOpen.value) {
     isMobileTreeOpen.value = false
   }
+
+  if (event.key === 'Escape' && isActionMenuOpen.value) {
+    isActionMenuOpen.value = false
+  }
+
+  if (event.key === 'Escape' && isDocumentInfoOpen.value) {
+    isDocumentInfoOpen.value = false
+  }
 }
 
 function syncDraft() {
   draft.title = selectedDocument.value?.title ?? ''
   draft.content = selectedDocument.value?.content ?? ''
+  saveState.value = 'idle'
+}
+
+const hasDraftChanges = computed(() => {
+  if (!selectedDocument.value) {
+    return false
+  }
+
+  return (
+    draft.title !== selectedDocument.value.title ||
+    draft.content !== selectedDocument.value.content
+  )
+})
+
+const documentMetaLabel = computed(() => {
+  if (!selectedDocument.value) {
+    return ''
+  }
+
+  const updatedAt = formatTimestamp(selectedDocument.value.updatedAt)
+  const updatedByName =
+    selectedDocument.value.updatedByName?.trim() ||
+    t('workspace.unknownUpdater')
+
+  return `${updatedAt} · ${updatedByName}`
+})
+
+const documentFolderLabel = computed(() => {
+  const folders = selectedPathNodes.value.slice(0, -1)
+
+  if (!folders.length) {
+    return t('workspace.rootFolder')
+  }
+
+  return folders.map((item) => item.title).join(' / ')
+})
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) {
+    return `${bytes} B`
+  }
+
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(2)} KB`
+  }
+
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+}
+
+const documentFileSizeLabel = computed(() => {
+  const document = selectedDocument.value
+
+  if (!document || document.isFolder) {
+    return '-'
+  }
+
+  const encoder = new TextEncoder()
+  return formatFileSize(encoder.encode(document.content ?? '').length)
+})
+
+function clearAutoSaveTimer() {
+  if (!autoSaveTimer.value) {
+    return
+  }
+
+  clearTimeout(autoSaveTimer.value)
+  autoSaveTimer.value = null
+}
+
+function scheduleAutoSave() {
+  clearAutoSaveTimer()
+
+  if (
+    !isEditing.value ||
+    !canEdit.value ||
+    !selectedDocument.value ||
+    !hasDraftChanges.value
+  ) {
+    return
+  }
+
+  autoSaveTimer.value = setTimeout(() => {
+    void saveDocument({ keepEditing: true, silentError: true })
+  }, autoSaveDebounceMs)
+}
+
+async function flushAutoSave() {
+  if (
+    !isEditing.value ||
+    !canEdit.value ||
+    !selectedDocument.value ||
+    !hasDraftChanges.value
+  ) {
+    return
+  }
+
+  await saveDocument({ keepEditing: true, silentError: true })
+}
+
+function handleVisibilityChange() {
+  if (document.visibilityState === 'hidden') {
+    void flushAutoSave()
+  }
+}
+
+function handleBeforeUnload() {
+  void flushAutoSave()
 }
 
 async function loadDocument(documentId: number | null) {
@@ -581,9 +773,12 @@ async function loadDocument(documentId: number | null) {
 
   try {
     const endpoint = `/api/spaces/${spaceId.value}/docs/${documentId}` as string
-    const response = await $fetch<ApiResponse<{ document: DocumentDetail }>>(endpoint, {
-      headers: requestHeaders
-    })
+    const response = await $fetch<ApiResponse<{ document: DocumentDetail }>>(
+      endpoint,
+      {
+        headers: requestHeaders
+      }
+    )
 
     if (response.ok) {
       workspaceError.value = ''
@@ -596,7 +791,8 @@ async function loadDocument(documentId: number | null) {
     workspaceError.value = response.error.message
   } catch (error: unknown) {
     selectedDocument.value = null
-    workspaceError.value = error instanceof Error ? error.message : 'Unable to load document.'
+    workspaceError.value =
+      error instanceof Error ? error.message : 'Unable to load document.'
   }
 }
 
@@ -615,6 +811,7 @@ function toggleFolder(nodeId: number) {
 function selectNode(node: TreeNode | DocumentTreeItem) {
   if (selectedDocumentId.value === node.id) {
     isMobileTreeOpen.value = false
+    isActionMenuOpen.value = false
     void loadDocument(node.id)
     return
   }
@@ -622,6 +819,7 @@ function selectNode(node: TreeNode | DocumentTreeItem) {
   selectedDocumentId.value = node.id
   expandDocumentPath(node.id)
   isMobileTreeOpen.value = false
+  isActionMenuOpen.value = false
 }
 
 function startEdit() {
@@ -629,6 +827,7 @@ function startEdit() {
     return
   }
 
+  isActionMenuOpen.value = false
   draft.title = selectedDocument.value.title
   isRenaming.value = true
 
@@ -636,39 +835,101 @@ function startEdit() {
     syncDraft()
     editorRenderKey.value += 1
     isEditing.value = true
+    saveState.value = 'idle'
   }
 }
 
 function cancelRename() {
-  draft.title = selectedDocument.value?.title ?? ''
+  syncDraft()
   isRenaming.value = false
   isEditing.value = false
+  clearAutoSaveTimer()
 }
 
-async function saveDocument() {
-  if (!selectedDocument.value) {
+async function toggleEditingMode() {
+  if (
+    !selectedDocument.value ||
+    !canEdit.value ||
+    selectedDocument.value.isFolder
+  ) {
+    return
+  }
+
+  if (isEditing.value) {
+    await saveDocument({ keepEditing: false })
+    return
+  }
+
+  startEdit()
+}
+
+async function saveNow() {
+  await saveDocument({ keepEditing: true })
+}
+
+function openTreeFromActionMenu() {
+  isMobileTreeOpen.value = true
+  isActionMenuOpen.value = false
+}
+
+function toggleMovePanelFromActionMenu() {
+  isMovePanelOpen.value = !isMovePanelOpen.value
+  isActionMenuOpen.value = false
+}
+
+function openDocumentInfoPanel() {
+  isDocumentInfoOpen.value = true
+  isActionMenuOpen.value = false
+  isExportMenuOpen.value = false
+}
+
+async function saveDocument(options?: {
+  keepEditing?: boolean
+  silentError?: boolean
+}) {
+  const keepEditing = options?.keepEditing ?? false
+  const silentError = options?.silentError ?? false
+
+  if (!selectedDocument.value || savePending.value) {
+    return
+  }
+
+  if (!hasDraftChanges.value) {
+    saveState.value = 'saved'
+    if (!keepEditing) {
+      isEditing.value = false
+      isRenaming.value = false
+    }
     return
   }
 
   savePending.value = true
+  saveState.value = 'saving'
   conflictMessage.value = ''
 
   try {
-    const endpoint = `/api/spaces/${spaceId.value}/docs/${selectedDocument.value.id}` as string
-    const response = await $fetch<ApiResponse<{ document: DocumentDetail }>>(endpoint, {
-      method: 'PUT',
-      body: {
-        title: draft.title,
-        content: draft.content,
-        parentId: selectedDocument.value.parentId,
-        version: selectedDocument.value.version
+    const endpoint =
+      `/api/spaces/${spaceId.value}/docs/${selectedDocument.value.id}` as string
+    const response = await $fetch<ApiResponse<{ document: DocumentDetail }>>(
+      endpoint,
+      {
+        method: 'PUT',
+        body: {
+          title: draft.title,
+          content: draft.content,
+          parentId: selectedDocument.value.parentId,
+          version: selectedDocument.value.version
+        }
       }
-    })
+    )
 
     if (response.ok) {
       selectedDocument.value = response.data.document
-      isEditing.value = false
-      isRenaming.value = false
+      saveState.value = 'saved'
+      if (!keepEditing) {
+        isEditing.value = false
+        isRenaming.value = false
+      }
       await refreshTree()
       expandDocumentPath(response.data.document.id)
     }
@@ -700,10 +961,15 @@ async function saveDocument() {
         await loadDocument(currentDocumentId)
       }
 
+      saveState.value = 'error'
       return
     }
 
-    workspaceError.value = error instanceof Error ? error.message : 'Unable to save document.'
+    saveState.value = 'error'
+    if (!silentError) {
+      workspaceError.value =
+        error instanceof Error ? error.message : 'Unable to save document.'
+    }
   } finally {
     savePending.value = false
   }
@@ -723,14 +989,17 @@ async function createNode() {
 
   try {
     const endpoint = `/api/spaces/${spaceId.value}/docs` as string
-    const response = await $fetch<ApiResponse<{ document: DocumentDetail }>>(endpoint, {
-      method: 'POST',
-      body: {
-        title,
-        parentId: selectedParentIdForCreate.value,
-        isFolder: createNodeMode.value === 'folder'
+    const response = await $fetch<ApiResponse<{ document: DocumentDetail }>>(
+      endpoint,
+      {
+        method: 'POST',
+        body: {
+          title,
+          parentId: selectedParentIdForCreate.value,
+          isFolder: createNodeMode.value === 'folder'
+        }
       }
-    })
+    )
 
     createNodeTitle.value = ''
     createNodeMode.value = null
@@ -751,7 +1020,9 @@ async function createNode() {
     }
 
     workspaceError.value =
-      apiError.data?.error?.message ?? apiError.message ?? 'Unable to create item.'
+      apiError.data?.error?.message ??
+      apiError.message ??
+      'Unable to create item.'
   } finally {
     createPending.value = false
   }
@@ -767,9 +1038,11 @@ async function deleteDocument() {
   }
 
   deletePending.value = true
+  isActionMenuOpen.value = false
 
   try {
-    const endpoint = `/api/spaces/${spaceId.value}/docs/${selectedDocument.value.id}` as string
+    const endpoint =
+      `/api/spaces/${spaceId.value}/docs/${selectedDocument.value.id}` as string
     await $fetch(endpoint, {
       method: 'DELETE',
       body: {}
@@ -790,18 +1063,26 @@ async function moveDocument() {
 
   movePending.value = true
   workspaceError.value = ''
+  isActionMenuOpen.value = false
 
   try {
-    const endpoint = `/api/spaces/${spaceId.value}/docs/${selectedDocument.value.id}` as string
-    const response = await $fetch<ApiResponse<{ document: DocumentDetail }>>(endpoint, {
-      method: 'PUT',
-      body: {
-        title: selectedDocument.value.title,
-        content: selectedDocument.value.content,
-        parentId: moveTargetParentId.value === 'root' ? null : Number(moveTargetParentId.value),
-        version: selectedDocument.value.version
+    const endpoint =
+      `/api/spaces/${spaceId.value}/docs/${selectedDocument.value.id}` as string
+    const response = await $fetch<ApiResponse<{ document: DocumentDetail }>>(
+      endpoint,
+      {
+        method: 'PUT',
+        body: {
+          title: selectedDocument.value.title,
+          content: selectedDocument.value.content,
+          parentId:
+            moveTargetParentId.value === 'root'
+              ? null
+              : Number(moveTargetParentId.value),
+          version: selectedDocument.value.version
+        }
       }
-    })
+    )
 
     if (response.ok) {
       selectedDocument.value = response.data.document
@@ -837,7 +1118,9 @@ async function moveDocument() {
     }
 
     workspaceError.value =
-      apiError.data?.error?.message ?? apiError.message ?? t('workspace.moveFailed')
+      apiError.data?.error?.message ??
+      apiError.message ??
+      t('workspace.moveFailed')
   } finally {
     movePending.value = false
   }
@@ -869,6 +1152,7 @@ async function toggleFullscreen() {
   isMobileTreeOpen.value = false
   isMovePanelOpen.value = false
   isExportMenuOpen.value = false
+  isActionMenuOpen.value = false
 
   if (document.fullscreenElement === documentPanelRef.value) {
     await document.exitFullscreen()
@@ -907,6 +1191,104 @@ function buildExportHtml() {
 </html>`
 }
 
+function buildWordHtml() {
+  if (!selectedDocument.value) {
+    return ''
+  }
+
+  const body = renderMarkdown(selectedDocument.value.content)
+  return `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40" lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>${selectedDocument.value.title}</title>
+    <style>
+      body { font-family: 'Segoe UI', sans-serif; margin: 24px; color: #111827; }
+      .markdown-body { line-height: 1.75; }
+      .markdown-body img { max-width: 100%; height: auto; }
+      .markdown-body pre { background: #111827; color: #f9fafb; padding: 16px; border-radius: 12px; overflow-x: auto; }
+      .markdown-body code { background: rgba(15, 23, 42, 0.08); padding: 2px 6px; border-radius: 6px; }
+      .markdown-body pre code { background: transparent; padding: 0; }
+      .markdown-body table { width: 100%; border-collapse: collapse; border: 1px solid #9ca3af; mso-border-alt: solid #9ca3af .75pt; }
+      .markdown-body th, .markdown-body td { border: 1px solid #9ca3af; mso-border-alt: solid #9ca3af .75pt; padding: 8px 10px; text-align: left; }
+      .markdown-body blockquote { border-left: 4px solid #d97706; padding-left: 12px; color: #4b5563; }
+    </style>
+  </head>
+  <body>
+    <article class="markdown-body">${body}</article>
+  </body>
+</html>`
+}
+
+async function loadHtml2Pdf() {
+  if (!import.meta.client) {
+    return null
+  }
+
+  const globalWithHtml2Pdf = window as Window & {
+    html2pdf?: (source?: unknown) => {
+      from: (element: HTMLElement) => unknown
+      set: (options: Record<string, unknown>) => unknown
+      save: () => Promise<void>
+    }
+  }
+
+  if (globalWithHtml2Pdf.html2pdf) {
+    return globalWithHtml2Pdf.html2pdf
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const existing = document.querySelector(
+      'script[data-fd-html2pdf="true"]'
+    ) as HTMLScriptElement | null
+
+    if (existing && globalWithHtml2Pdf.html2pdf) {
+      resolve()
+      return
+    }
+
+    if (existing) {
+      existing.addEventListener('load', () => resolve(), { once: true })
+      existing.addEventListener(
+        'error',
+        () => reject(new Error('html2pdf script load failed')),
+        { once: true }
+      )
+      return
+    }
+
+    const scriptSources = [
+      '/vendor/html2pdf.bundle.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js'
+    ]
+    let sourceIndex = 0
+
+    function appendScript() {
+      const script = document.createElement('script')
+      script.src = scriptSources[sourceIndex] as string
+      script.async = true
+      script.dataset.fdHtml2pdf = 'true'
+      script.onload = () => resolve()
+      script.onerror = () => {
+        sourceIndex += 1
+        script.remove()
+
+        if (sourceIndex < scriptSources.length) {
+          appendScript()
+          return
+        }
+
+        reject(new Error('html2pdf script load failed'))
+      }
+      document.head.appendChild(script)
+    }
+
+    appendScript()
+  })
+
+  return globalWithHtml2Pdf.html2pdf ?? null
+}
+
 function exportDocument(format: 'md' | 'pdf' | 'word') {
   if (!selectedDocument.value || !import.meta.client) {
     return
@@ -914,436 +1296,725 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
 
   const filename = sanitizeFilename(selectedDocument.value.title)
   isExportMenuOpen.value = false
+  isActionMenuOpen.value = false
 
   if (format === 'md') {
-    downloadBlob(selectedDocument.value.content, `${filename}.md`, 'text/markdown;charset=utf-8')
+    downloadBlob(
+      selectedDocument.value.content,
+      `${filename}.md`,
+      'text/markdown;charset=utf-8'
+    )
+    return
+  }
+
+  if (format === 'word') {
+    const wordHtml = buildWordHtml()
+    downloadBlob(
+      wordHtml,
+      `${filename}.doc`,
+      'application/msword;charset=utf-8'
+    )
     return
   }
 
   const html = buildExportHtml()
 
-  if (format === 'word') {
-    downloadBlob(html, `${filename}.doc`, 'application/msword;charset=utf-8')
-    return
-  }
+  if (format === 'pdf') {
+    void (async () => {
+      try {
+        const html2pdf = await loadHtml2Pdf()
 
-  const popup = window.open('', '_blank', 'noopener,noreferrer,width=1100,height=800')
+        if (!html2pdf) {
+          workspaceError.value = t('workspace.exportPdfEngineMissing')
+          return
+        }
 
-  if (!popup) {
-    workspaceError.value = t('workspace.exportPopupBlocked')
-    return
-  }
+        const container = document.createElement('div')
+        container.style.position = 'fixed'
+        container.style.left = '-99999px'
+        container.style.top = '0'
+        container.style.width = '1024px'
+        container.innerHTML = html
+        document.body.appendChild(container)
 
-  popup.document.open()
-  popup.document.write(html)
-  popup.document.close()
-  popup.onload = () => {
-    popup.focus()
-    popup.print()
+        const article = container.querySelector(
+          '.markdown-body'
+        ) as HTMLElement | null
+        const source = article ?? container
+
+        await (
+          html2pdf() as {
+            from: (element: HTMLElement) => {
+              set: (options: Record<string, unknown>) => {
+                save: () => Promise<void>
+              }
+            }
+          }
+        )
+          .from(source)
+          .set({
+            margin: [10, 10, 10, 10],
+            filename: `${filename}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: {
+              scale: 2,
+              useCORS: true,
+              backgroundColor: '#ffffff'
+            },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+          })
+          .save()
+
+        container.remove()
+      } catch (error) {
+        workspaceError.value =
+          error instanceof Error
+            ? t('workspace.exportPdfEngineMissing')
+            : t('workspace.exportPdfEngineMissing')
+      }
+    })()
   }
 }
 </script>
 
 <template>
-  <main class="fd-workspace-shell mx-auto box-border flex w-full max-w-7xl flex-col gap-4 overflow-hidden px-4 py-4 sm:px-6 lg:px-8">
-    <p v-if="workspaceError" class="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">
+  <main
+    class="fd-workspace-shell fd-workspace-immersive mx-auto box-border grid w-full max-w-7xl grid-cols-1 gap-3 overflow-hidden px-2 py-2 sm:px-4 sm:py-4 md:grid-cols-[minmax(15rem,18rem)_minmax(0,1fr)] md:items-stretch lg:px-6"
+  >
+    <p
+      v-if="workspaceError"
+      class="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700"
+    >
       {{ workspaceError }}
     </p>
 
-    <div class="grid min-h-0 flex-1 gap-4 xl:grid-cols-[23rem_minmax(0,1fr)]">
-      <aside
-        class="fd-tree-shell fd-tree-shell-mobile order-2 overflow-hidden xl:order-1"
-        :class="{ 'fd-tree-shell-mobile-open': isMobileTreeOpen }"
-      >
-        <div class="fd-tree-workspace">
-          <div class="fd-tree-workspace-row">
-            <div class="fd-workspace-switch-shell">
-              <button
-                type="button"
-                class="fd-workspace-switch fd-workspace-switch-button"
-                :aria-label="t('workspace.space')"
-                :aria-expanded="isSpaceMenuOpen ? 'true' : 'false'"
-                @click="isSpaceMenuOpen = !isSpaceMenuOpen"
-              >
-                <span class="truncate">{{ currentWorkspaceName }}</span>
-              </button>
-              <button
-                v-if="isSpaceMenuOpen"
-                type="button"
-                class="fd-workspace-switch-backdrop"
-                aria-label="关闭空间菜单"
-                @click="isSpaceMenuOpen = false"
-              />
-              <div v-if="isSpaceMenuOpen" class="fd-workspace-switch-menu">
-                <button
-                  v-for="workspace in workspaceOptions"
-                  :key="workspace.id"
-                  type="button"
-                  class="fd-workspace-switch-option"
-                  :class="workspace.id === spaceId ? 'fd-workspace-switch-option-active' : ''"
-                  @click="selectWorkspace(workspace.id)"
-                >
-                  {{ workspace.name }}
-                </button>
-              </div>
-            </div>
-            <NuxtLink class="fd-workspace-home" to="/" :title="t('common.home')">
-              <BrandMark size="sm" :show-name="false" />
-            </NuxtLink>
+    <section
+      ref="documentPanelRef"
+      class="fd-document-panel fd-document-panel-immersive order-1 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.5rem] border border-[rgba(31,41,55,0.08)] p-3 shadow-[0_22px_44px_rgba(31,41,55,0.08)] sm:p-4 md:order-2"
+    >
+      <template v-if="selectedDocument">
+        <button
+          v-if="isActionMenuOpen"
+          type="button"
+          class="fd-action-menu-backdrop"
+          aria-label="关闭操作菜单"
+          @click="isActionMenuOpen = false"
+        />
+        <div class="fd-doc-header fd-immersive-header">
+          <div class="fd-immersive-left">
             <button
               type="button"
-              class="fd-mobile-tree-close xl:hidden"
-              @click="isMobileTreeOpen = false"
+              class="fd-icon-button md:hidden"
+              :title="t('workspace.tree')"
+              @click="isMobileTreeOpen = true"
             >
-              <WorkspaceIcon name="close" class="h-4 w-4" />
-              <span>关闭</span>
+              <WorkspaceIcon name="folder-open" class="h-4 w-4" />
             </button>
-          </div>
-        </div>
-
-        <div class="fd-tree-heading">
-          <div>
-            <p class="text-xs uppercase tracking-[0.24em] text-slate-500">{{ t('workspace.tree') }}</p>
-            <h2 class="mt-2 text-xl font-semibold text-slate-800">{{ t('workspace.documents') }}</h2>
-            <p class="mt-1 text-sm text-slate-500">{{ t('workspace.treeHint') }}</p>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <button
-              type="button"
-              class="fd-tree-header-button"
-              :title="t('workspace.expandAll')"
-              @click="expandAllFolders"
-            >
-              <WorkspaceIcon name="expand-all" class="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              class="fd-tree-header-button"
-              :title="t('workspace.collapseAll')"
-              @click="collapseAllFolders"
-            >
-              <WorkspaceIcon name="collapse-all" class="h-4 w-4" />
-            </button>
-            <template v-if="canEdit">
-              <button
-                type="button"
-                class="fd-tree-header-button"
-                :title="t('workspace.doc')"
-                @click="createNodeMode = 'doc'"
-              >
-                <WorkspaceIcon name="plus-file" class="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                class="fd-tree-header-button"
-                :title="t('workspace.folder')"
-                @click="createNodeMode = 'folder'"
-              >
-                <WorkspaceIcon name="plus-folder" class="h-4 w-4" />
-              </button>
-            </template>
-          </div>
-        </div>
-
-        <form v-if="createNodeMode" class="mt-4 space-y-3" @submit.prevent="createNode">
-          <UInput
-            v-model="createNodeTitle"
-            size="lg"
-            :placeholder="createNodeMode === 'folder' ? t('workspace.folderName') : t('workspace.documentTitle')"
-          />
-          <p class="text-sm leading-6 text-slate-500">
-            {{ t('workspace.createLocationHint') }}
-          </p>
-          <div class="flex gap-2">
-            <UButton type="submit" color="neutral" size="sm" :loading="createPending">
-              {{ t('common.create') }}
-            </UButton>
-            <UButton type="button" color="neutral" variant="ghost" size="sm" @click="createNodeMode = null">
-              {{ t('common.cancel') }}
-            </UButton>
-          </div>
-        </form>
-
-        <div class="fd-tree-list mt-4 space-y-2">
-          <div
-            v-for="item in visibleTreeNodes"
-            :key="item.id"
-            class="fd-tree-row"
-            :class="{
-              'fd-tree-row-selected': selectedDocumentId === item.id,
-              'fd-tree-row-ancestor': selectedAncestorIds.has(item.id),
-              'fd-tree-row-branch': selectedPathIds.has(item.id)
-            }"
-            :style="{ paddingLeft: `${item.depth * 16}px` }"
-          >
-            <button
-              v-if="item.isFolder"
-              type="button"
-              class="fd-tree-toggle"
-              @click="toggleFolder(item.id)"
-            >
-              <WorkspaceIcon
-                name="chevron"
-                class="h-4 w-4 transition"
-                :class="expandedFolderIds.includes(item.id) ? 'rotate-90' : ''"
-              />
-            </button>
-            <span v-else class="fd-tree-dot">·</span>
-
-            <button
-              type="button"
-              class="fd-tree-item"
-              :class="{
-                'fd-tree-item-selected': selectedDocumentId === item.id,
-                'fd-tree-item-ancestor': selectedAncestorIds.has(item.id),
-                'fd-tree-item-branch': selectedPathIds.has(item.id) && selectedDocumentId !== item.id
-              }"
-              @click="selectNode(item)"
-            >
-              <span class="flex min-w-0 items-center gap-3">
-                <span class="fd-tree-icon">
-                  <WorkspaceIcon
-                    :name="item.isFolder ? (expandedFolderIds.includes(item.id) ? 'folder-open' : 'folder-closed') : 'file'"
-                    class="h-4 w-4"
-                  />
-                </span>
-                <span class="truncate text-sm font-medium sm:text-[15px]" :title="item.title">
-                  {{ item.title }}
-                </span>
-              </span>
-              <span class="flex shrink-0 items-center gap-2">
-                <small v-if="item.isFolder && item.children.length" class="fd-tree-pill">
-                  {{ item.children.length }}
-                </small>
-                <small class="fd-tree-version">v{{ item.version }}</small>
-              </span>
-            </button>
-          </div>
-
-          <div
-            v-if="treeItems.length === 0"
-            class="rounded-2xl border border-dashed border-[rgba(31,41,55,0.16)] px-4 py-6 text-sm leading-6 text-slate-500"
-          >
-            {{ t('workspace.noDocuments') }}
-          </div>
-        </div>
-      </aside>
-
-      <section
-        ref="documentPanelRef"
-        class="fd-document-panel order-1 flex min-h-0 flex-col overflow-hidden rounded-[2rem] border border-[rgba(31,41,55,0.1)] p-4 shadow-[0_26px_52px_rgba(31,41,55,0.08)] sm:p-5 xl:order-2"
-      >
-        <div class="fd-mobile-tree-trigger-wrap mb-3 flex justify-end xl:hidden">
-          <button
-            v-if="!isMobileTreeOpen"
-            type="button"
-            class="fd-mobile-tree-trigger"
-            @click="isMobileTreeOpen = true"
-          >
-            <WorkspaceIcon name="folder-open" class="h-4 w-4" />
-            <span>目录</span>
-          </button>
-        </div>
-
-        <template v-if="selectedDocument">
-          <div class="fd-doc-header">
             <div class="min-w-0 flex-1">
-              <div v-if="breadcrumbNodes.length" class="fd-tree-breadcrumbs mb-2">
-                <span class="fd-tree-context-label mr-1">{{ t('workspace.currentPath') }}</span>
-                <button
-                  v-for="pathNode in breadcrumbNodes"
-                  :key="`content-${pathNode.id}`"
-                  type="button"
-                  class="fd-tree-crumb"
-                  :class="selectedDocumentId === pathNode.id ? 'fd-tree-crumb-active' : ''"
-                  @click="selectNode(pathNode)"
-                  :title="pathNode.title"
-                >
-                  {{ pathNode.title }}
-                </button>
-              </div>
-              <div class="mt-2 flex flex-wrap items-center gap-3">
-                <span class="fd-tree-icon">
-                  <WorkspaceIcon
-                    :name="selectedDocument.isFolder ? 'folder-open' : 'file'"
-                    class="h-4 w-4"
-                  />
-                </span>
-                <template v-if="isRenaming">
-                  <UInput v-model="draft.title" size="xl" class="fd-title-input min-w-0 flex-1" />
-                </template>
-                <h2 v-else class="text-3xl font-semibold text-slate-800">{{ selectedDocument.title }}</h2>
-              </div>
-              <p class="mt-2 text-sm text-slate-500">
-                {{ t('workspace.version', { version: selectedDocument.version, updatedAt: formatTimestamp(selectedDocument.updatedAt) }) }}
+              <template v-if="isRenaming && canEdit">
+                <UInput
+                  v-model="draft.title"
+                  size="lg"
+                  class="fd-title-input min-w-0 flex-1"
+                />
+              </template>
+              <h2
+                v-else
+                class="fd-ellipsis-title text-lg font-semibold text-slate-800 sm:text-xl"
+                :title="selectedDocument.title"
+                :data-full-title="selectedDocument.title"
+              >
+                {{ selectedDocument.title }}
+              </h2>
+              <p class="mt-1 text-xs text-slate-500 sm:text-sm">
+                {{ documentMetaLabel }}
               </p>
             </div>
+          </div>
 
-            <div v-if="canEdit" class="fd-floating-toolbar">
+          <div class="fd-immersive-actions">
+            <button
+              v-if="isRenaming && canEdit"
+              type="button"
+              class="fd-icon-button"
+              :title="t('common.save')"
+              :disabled="savePending"
+              @click="saveNow"
+            >
+              <WorkspaceIcon name="save" class="h-4 w-4" />
+            </button>
+            <button
+              v-if="canEdit && !selectedDocument.isFolder"
+              type="button"
+              class="fd-icon-button"
+              :title="
+                isEditing ? t('workspace.readMode') : t('workspace.editMode')
+              "
+              @click="toggleEditingMode"
+            >
+              <WorkspaceIcon
+                :name="isEditing ? 'markdown' : 'edit'"
+                class="h-4 w-4"
+              />
+            </button>
+            <button
+              type="button"
+              class="fd-icon-button"
+              :title="t('workspace.actions')"
+              @click="isActionMenuOpen = !isActionMenuOpen"
+            >
+              <WorkspaceIcon name="settings" class="h-4 w-4" />
+            </button>
+          </div>
+
+          <div v-if="isActionMenuOpen" class="fd-action-menu-panel">
+            <button
+              type="button"
+              class="fd-action-menu-item"
+              :title="t('workspace.tree')"
+              :aria-label="t('workspace.tree')"
+              @click="openTreeFromActionMenu"
+            >
+              <WorkspaceIcon name="folder-open" class="h-4 w-4" />
+            </button>
+            <button
+              v-if="canEdit && isFileDocument"
+              type="button"
+              class="fd-action-menu-item"
+              :title="
+                isEditing ? t('workspace.readMode') : t('workspace.editMode')
+              "
+              :aria-label="
+                isEditing ? t('workspace.readMode') : t('workspace.editMode')
+              "
+              @click="toggleEditingMode"
+            >
+              <WorkspaceIcon
+                :name="isEditing ? 'markdown' : 'edit'"
+                class="h-4 w-4"
+              />
+            </button>
+            <button
+              v-if="canEdit && selectedDocument.isFolder && !isRenaming"
+              type="button"
+              class="fd-action-menu-item"
+              :title="t('common.edit')"
+              :aria-label="t('common.edit')"
+              @click="startEdit"
+            >
+              <WorkspaceIcon name="edit" class="h-4 w-4" />
+            </button>
+            <button
+              v-if="canEdit"
+              type="button"
+              class="fd-action-menu-item"
+              :title="t('workspace.move')"
+              :aria-label="t('workspace.move')"
+              @click="toggleMovePanelFromActionMenu"
+            >
+              <WorkspaceIcon name="move" class="h-4 w-4" />
+            </button>
+            <button
+              v-if="isFileDocument"
+              type="button"
+              class="fd-action-menu-item"
+              :title="
+                isFullscreen
+                  ? t('workspace.exitFullscreen')
+                  : t('workspace.fullscreen')
+              "
+              :aria-label="
+                isFullscreen
+                  ? t('workspace.exitFullscreen')
+                  : t('workspace.fullscreen')
+              "
+              @click="toggleFullscreen"
+            >
+              <WorkspaceIcon name="fullscreen" class="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              class="fd-action-menu-item"
+              :title="t('workspace.docInfo')"
+              :aria-label="t('workspace.docInfo')"
+              @click="openDocumentInfoPanel"
+            >
+              <WorkspaceIcon name="info" class="h-4 w-4" />
+            </button>
+            <button
+              v-if="isFileDocument"
+              type="button"
+              class="fd-action-menu-item"
+              :title="t('workspace.export')"
+              :aria-label="t('workspace.export')"
+              @click="isExportMenuOpen = !isExportMenuOpen"
+            >
+              <WorkspaceIcon name="export" class="h-4 w-4" />
+            </button>
+            <div v-if="isExportMenuOpen" class="fd-action-submenu">
               <button
                 type="button"
-                class="fd-icon-button"
-                :title="t('workspace.move')"
-                @click="isMovePanelOpen = !isMovePanelOpen"
+                class="fd-action-submenu-item"
+                :title="t('workspace.exportMd')"
+                :aria-label="t('workspace.exportMd')"
+                @click="exportDocument('md')"
               >
-                <WorkspaceIcon name="move" class="h-4 w-4" />
+                <WorkspaceIcon name="markdown" class="h-4 w-4" />
               </button>
               <button
-                v-if="!isRenaming"
                 type="button"
-                class="fd-icon-button"
-                :title="t('common.edit')"
-                @click="startEdit"
+                class="fd-action-submenu-item"
+                :title="t('workspace.exportPdf')"
+                :aria-label="t('workspace.exportPdf')"
+                @click="exportDocument('pdf')"
               >
-                <WorkspaceIcon name="edit" class="h-4 w-4" />
+                <WorkspaceIcon name="pdf" class="h-4 w-4" />
               </button>
               <button
-                v-if="isRenaming"
+                type="button"
+                class="fd-action-submenu-item"
+                :title="t('workspace.exportWord')"
+                :aria-label="t('workspace.exportWord')"
+                @click="exportDocument('word')"
+              >
+                <WorkspaceIcon name="word" class="h-4 w-4" />
+              </button>
+            </div>
+            <button
+              v-if="canEdit"
+              type="button"
+              class="fd-action-menu-item fd-action-menu-item-danger"
+              :disabled="deletePending"
+              :title="t('common.delete')"
+              :aria-label="t('common.delete')"
+              @click="deleteDocument"
+            >
+              <WorkspaceIcon name="delete" class="h-4 w-4" />
+            </button>
+            <button
+              v-if="isRenaming && canEdit"
+              type="button"
+              class="fd-action-menu-item"
+              :title="t('common.cancel')"
+              :aria-label="t('common.cancel')"
+              @click="cancelRename"
+            >
+              <WorkspaceIcon name="close" class="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        <div
+          v-if="isDocumentInfoOpen"
+          class="fd-doc-info-modal-wrap"
+          role="dialog"
+          aria-modal="true"
+          :aria-label="t('workspace.docInfo')"
+        >
+          <button
+            type="button"
+            class="fd-doc-info-modal-backdrop"
+            :aria-label="t('common.cancel')"
+            @click="isDocumentInfoOpen = false"
+          />
+          <div class="fd-doc-info-modal">
+            <div class="fd-doc-info-modal-head">
+              <h3>{{ t('workspace.docInfo') }}</h3>
+              <button
                 type="button"
                 class="fd-icon-button"
+                :aria-label="t('common.cancel')"
                 :title="t('common.cancel')"
-                @click="cancelRename"
+                @click="isDocumentInfoOpen = false"
               >
                 <WorkspaceIcon name="close" class="h-4 w-4" />
               </button>
-              <button
-                v-if="isRenaming"
-                type="button"
-                class="fd-icon-button"
-                :title="t('common.save')"
-                @click="saveDocument"
-              >
-                <WorkspaceIcon name="save" class="h-4 w-4" />
-              </button>
-              <button
-                v-if="isFileDocument"
-                type="button"
-                class="fd-icon-button"
-                :title="isFullscreen ? t('workspace.exitFullscreen') : t('workspace.fullscreen')"
-                @click="toggleFullscreen"
-              >
-                <WorkspaceIcon name="fullscreen" class="h-4 w-4" />
-              </button>
-              <div v-if="isFileDocument" class="relative">
-                <button
-                  type="button"
-                  class="fd-icon-button"
-                  :title="t('workspace.export')"
-                  @click="isExportMenuOpen = !isExportMenuOpen"
-                >
-                  <WorkspaceIcon name="export" class="h-4 w-4" />
-                </button>
-                <div v-if="isExportMenuOpen" class="fd-export-menu">
-                  <button type="button" class="fd-export-item" :title="t('workspace.exportMd')" @click="exportDocument('md')">
-                    <WorkspaceIcon name="markdown" class="h-4 w-4" />
-                  </button>
-                  <button type="button" class="fd-export-item" :title="t('workspace.exportPdf')" @click="exportDocument('pdf')">
-                    <WorkspaceIcon name="pdf" class="h-4 w-4" />
-                  </button>
-                  <button type="button" class="fd-export-item" :title="t('workspace.exportWord')" @click="exportDocument('word')">
-                    <WorkspaceIcon name="word" class="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-              <button
-                type="button"
-                class="fd-icon-button fd-icon-button-danger"
-                :title="t('common.delete')"
-                @click="deleteDocument"
-              >
-                <WorkspaceIcon name="delete" class="h-4 w-4" />
-              </button>
+            </div>
+            <div class="fd-doc-info-grid">
+              <p class="fd-doc-info-label">
+                {{ t('workspace.docInfoFolder') }}
+              </p>
+              <p class="fd-doc-info-value" :title="documentFolderLabel">
+                {{ documentFolderLabel }}
+              </p>
+              <p class="fd-doc-info-label">
+                {{ t('workspace.docInfoCreatedAt') }}
+              </p>
+              <p class="fd-doc-info-value">
+                {{ formatTimestamp(selectedDocument.createdAt) }}
+              </p>
+              <p class="fd-doc-info-label">
+                {{ t('workspace.docInfoCreatedBy') }}
+              </p>
+              <p class="fd-doc-info-value">
+                {{
+                  selectedDocument.createdByName?.trim() ||
+                  t('workspace.unknownUpdater')
+                }}
+              </p>
+              <p class="fd-doc-info-label">
+                {{ t('workspace.docInfoUpdatedAt') }}
+              </p>
+              <p class="fd-doc-info-value">
+                {{ formatTimestamp(selectedDocument.updatedAt) }}
+              </p>
+              <p class="fd-doc-info-label">
+                {{ t('workspace.docInfoUpdatedBy') }}
+              </p>
+              <p class="fd-doc-info-value">
+                {{
+                  selectedDocument.updatedByName?.trim() ||
+                  t('workspace.unknownUpdater')
+                }}
+              </p>
+              <p class="fd-doc-info-label">
+                {{ t('workspace.docInfoFileSize') }}
+              </p>
+              <p class="fd-doc-info-value">
+                {{ documentFileSizeLabel }}
+              </p>
             </div>
           </div>
-
-          <div v-if="isMovePanelOpen && canEdit" class="fd-move-panel mt-4 shrink-0 rounded-[1.6rem] bg-[rgba(244,238,229,0.72)] p-4 sm:p-5">
-            <div class="flex flex-col gap-3 lg:flex-row lg:items-end">
-              <div class="flex-1">
-                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">
-                  {{ t('workspace.moveTarget') }}
-                </p>
-                <AppSelectMenu
-                  v-model="moveTargetParentId"
-                  class="mt-2"
-                  :options="moveSelectOptions"
-                  :aria-label="t('workspace.moveTarget')"
-                />
-              </div>
-              <div class="flex flex-wrap gap-2">
-                <UButton color="neutral" :loading="movePending" @click="moveDocument">
-                  {{ t('workspace.confirmMove') }}
-                </UButton>
-                <UButton color="neutral" variant="ghost" @click="isMovePanelOpen = false">
-                  {{ t('common.cancel') }}
-                </UButton>
-              </div>
-            </div>
-            <p class="mt-3 text-sm leading-6 text-slate-500">
-              {{ t('workspace.moveHint') }}
-            </p>
-          </div>
-
-          <p v-if="conflictMessage" class="fd-conflict-note mt-4 shrink-0 rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
-            {{ conflictMessage }}
-          </p>
-
-          <div
-            v-if="selectedDocument.isFolder"
-            class="fd-document-stage fd-folder-stage mt-5 rounded-2xl bg-[rgba(244,238,229,0.7)] p-5 text-slate-600"
-          >
-            <p>{{ t('workspace.folderHint') }}</p>
-            <p class="mt-3 text-sm leading-6 text-slate-500">
-              {{ t('workspace.folderMoveHint') }}
-            </p>
-          </div>
-
-          <div v-else class="fd-document-stage mt-5 flex min-h-0 flex-1 flex-col">
-            <div v-if="isEditing" class="fd-editor-stage">
-              <MarkdownEditor
-                :key="`editor-${selectedDocument.id}-${editorRenderKey}`"
-                v-model="draft.content"
-                :upload-url="`/api/spaces/${spaceId}/upload`"
-              />
-            </div>
-
-            <div v-else class="fd-reader-shell fd-document-stage">
-              <div class="fd-reading-progress" aria-hidden="true">
-                <button
-                  type="button"
-                  class="fd-reading-progress-track"
-                  :title="`${Math.round(readingProgress)}%`"
-                  @click="jumpToProgress"
-                >
-                  <div class="fd-reading-progress-fill" :style="{ height: `${readingProgress}%` }" />
-                </button>
-                <span v-if="readingProgress > 0" class="fd-reading-progress-label">{{ Math.round(readingProgress) }}%</span>
-              </div>
-              <div
-                ref="documentScrollRef"
-                class="fd-reader-scroll"
-                @scroll="updateReadingProgress"
-              >
-                <div class="fd-reader-content">
-                  <MarkdownViewer :value="selectedDocument.content" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </template>
+        </div>
 
         <div
-          v-else
-          class="fd-workspace-empty flex min-h-0 flex-1 items-center justify-center rounded-[1.75rem] border border-dashed border-[rgba(31,41,55,0.16)] bg-[rgba(255,251,245,0.72)] p-6 text-center text-slate-500"
+          v-if="isMovePanelOpen && canEdit"
+          class="fd-move-panel mt-3 shrink-0 rounded-[1.2rem] bg-[rgba(244,238,229,0.72)] p-3 sm:p-4"
+        >
+          <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <div class="flex-1">
+              <p
+                class="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700"
+              >
+                {{ t('workspace.moveTarget') }}
+              </p>
+              <AppSelectMenu
+                v-model="moveTargetParentId"
+                class="mt-2"
+                :options="moveSelectOptions"
+                :aria-label="t('workspace.moveTarget')"
+              />
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <UButton
+                color="neutral"
+                :loading="movePending"
+                @click="moveDocument"
+              >
+                {{ t('workspace.confirmMove') }}
+              </UButton>
+              <UButton
+                color="neutral"
+                variant="ghost"
+                @click="isMovePanelOpen = false"
+              >
+                {{ t('common.cancel') }}
+              </UButton>
+            </div>
+          </div>
+        </div>
+
+        <p
+          v-if="conflictMessage"
+          class="fd-conflict-note mt-3 shrink-0 rounded-xl bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-800"
+        >
+          {{ conflictMessage }}
+        </p>
+
+        <div
+          v-if="selectedDocument.isFolder"
+          class="fd-document-stage fd-folder-stage mt-3 rounded-xl bg-[rgba(244,238,229,0.7)] p-4 text-slate-600"
+        >
+          <p>{{ t('workspace.folderHint') }}</p>
+          <p class="mt-2 text-sm leading-6 text-slate-500">
+            {{ t('workspace.folderMoveHint') }}
+          </p>
+        </div>
+
+        <div v-else class="fd-document-stage mt-3 flex min-h-0 flex-1 flex-col">
+          <div v-if="isEditing" class="fd-editor-stage">
+            <MarkdownEditor
+              :key="`editor-${selectedDocument.id}-${editorRenderKey}`"
+              v-model="draft.content"
+              :upload-url="`/api/spaces/${spaceId}/upload`"
+            />
+          </div>
+
+          <div v-else class="fd-reader-shell fd-document-stage">
+            <div class="fd-reading-progress" aria-hidden="true">
+              <button
+                type="button"
+                class="fd-reading-progress-track"
+                :title="`${Math.round(readingProgress)}%`"
+                @click="jumpToProgress"
+                @pointerdown="jumpToProgress"
+              >
+                <div
+                  class="fd-reading-progress-fill"
+                  :style="{ height: `${readingProgress}%` }"
+                />
+              </button>
+              <span v-if="readingProgress > 0" class="fd-reading-progress-label"
+                >{{ Math.round(readingProgress) }}%</span
+              >
+            </div>
+            <div
+              ref="documentScrollRef"
+              class="fd-reader-scroll"
+              @scroll="updateReadingProgress"
+            >
+              <div class="fd-reader-content">
+                <MarkdownViewer :value="selectedDocument.content" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <div v-else class="flex min-h-0 flex-1 flex-col">
+        <div class="fd-doc-header fd-immersive-header">
+          <div class="fd-immersive-left">
+            <button
+              type="button"
+              class="fd-icon-button md:hidden"
+              :title="t('workspace.tree')"
+              @click="isMobileTreeOpen = true"
+            >
+              <WorkspaceIcon name="folder-open" class="h-4 w-4" />
+            </button>
+            <div class="min-w-0 flex-1">
+              <h2
+                class="fd-ellipsis-title text-lg font-semibold text-slate-800 sm:text-xl"
+                :title="currentWorkspaceName || t('workspace.documents')"
+                :data-full-title="
+                  currentWorkspaceName || t('workspace.documents')
+                "
+              >
+                {{ currentWorkspaceName || t('workspace.documents') }}
+              </h2>
+              <p class="mt-1 text-xs text-slate-500 sm:text-sm">
+                {{ t('workspace.treeHint') }}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div
+          class="fd-workspace-empty mt-3 flex min-h-0 flex-1 items-center justify-center rounded-[1.2rem] border border-dashed border-[rgba(31,41,55,0.16)] bg-[rgba(255,251,245,0.72)] p-6 text-center text-slate-500"
         >
           {{ t('workspace.pickDocument') }}
         </div>
-      </section>
-    </div>
+      </div>
+    </section>
+
+    <aside
+      class="fd-tree-shell fd-tree-drawer order-2 overflow-hidden md:order-1"
+      :class="{ 'fd-tree-drawer-open': isMobileTreeOpen }"
+    >
+      <div class="fd-tree-workspace">
+        <div class="fd-tree-workspace-row">
+          <div class="fd-workspace-switch-shell">
+            <button
+              type="button"
+              class="fd-workspace-switch fd-workspace-switch-button"
+              :aria-label="t('workspace.space')"
+              :aria-expanded="isSpaceMenuOpen ? 'true' : 'false'"
+              @click="isSpaceMenuOpen = !isSpaceMenuOpen"
+            >
+              <span class="truncate">{{ currentWorkspaceName }}</span>
+            </button>
+            <button
+              v-if="isSpaceMenuOpen"
+              type="button"
+              class="fd-workspace-switch-backdrop"
+              aria-label="关闭空间菜单"
+              @click="isSpaceMenuOpen = false"
+            />
+            <div v-if="isSpaceMenuOpen" class="fd-workspace-switch-menu">
+              <button
+                v-for="workspace in workspaceOptions"
+                :key="workspace.id"
+                type="button"
+                class="fd-workspace-switch-option"
+                :class="
+                  workspace.id === spaceId
+                    ? 'fd-workspace-switch-option-active'
+                    : ''
+                "
+                @click="selectWorkspace(workspace.id)"
+              >
+                {{ workspace.name }}
+              </button>
+            </div>
+          </div>
+          <NuxtLink class="fd-workspace-home" to="/" :title="t('common.home')">
+            <BrandMark size="sm" :show-name="false" />
+          </NuxtLink>
+          <button
+            type="button"
+            class="fd-mobile-tree-close"
+            @click="isMobileTreeOpen = false"
+          >
+            <WorkspaceIcon name="close" class="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      <div class="fd-tree-heading">
+        <div>
+          <p class="text-xs uppercase tracking-[0.24em] text-slate-500">
+            {{ t('workspace.tree') }}
+          </p>
+          <h2 class="mt-2 text-lg font-semibold text-slate-800">
+            {{ t('workspace.documents') }}
+          </h2>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button
+            type="button"
+            class="fd-tree-header-button"
+            :title="t('workspace.expandAll')"
+            @click="expandAllFolders"
+          >
+            <WorkspaceIcon name="expand-all" class="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            class="fd-tree-header-button"
+            :title="t('workspace.collapseAll')"
+            @click="collapseAllFolders"
+          >
+            <WorkspaceIcon name="collapse-all" class="h-4 w-4" />
+          </button>
+          <template v-if="canEdit">
+            <button
+              type="button"
+              class="fd-tree-header-button"
+              :title="t('workspace.doc')"
+              @click="createNodeMode = 'doc'"
+            >
+              <WorkspaceIcon name="plus-file" class="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              class="fd-tree-header-button"
+              :title="t('workspace.folder')"
+              @click="createNodeMode = 'folder'"
+            >
+              <WorkspaceIcon name="plus-folder" class="h-4 w-4" />
+            </button>
+          </template>
+        </div>
+      </div>
+
+      <form
+        v-if="createNodeMode"
+        class="mt-4 space-y-3"
+        @submit.prevent="createNode"
+      >
+        <UInput
+          v-model="createNodeTitle"
+          size="lg"
+          :placeholder="
+            createNodeMode === 'folder'
+              ? t('workspace.folderName')
+              : t('workspace.documentTitle')
+          "
+        />
+        <div class="flex gap-2">
+          <UButton
+            type="submit"
+            color="neutral"
+            size="sm"
+            :loading="createPending"
+          >
+            {{ t('common.create') }}
+          </UButton>
+          <UButton
+            type="button"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            @click="createNodeMode = null"
+          >
+            {{ t('common.cancel') }}
+          </UButton>
+        </div>
+      </form>
+
+      <div class="fd-tree-list mt-2.5 space-y-1">
+        <div
+          v-for="item in visibleTreeNodes"
+          :key="item.id"
+          class="fd-tree-row"
+          :class="{
+            'fd-tree-row-selected': selectedDocumentId === item.id,
+            'fd-tree-row-ancestor': selectedAncestorIds.has(item.id),
+            'fd-tree-row-branch': selectedPathIds.has(item.id)
+          }"
+          :style="{ paddingLeft: `${item.depth * 16}px` }"
+        >
+          <button
+            v-if="item.isFolder"
+            type="button"
+            class="fd-tree-toggle"
+            @click="toggleFolder(item.id)"
+          >
+            <WorkspaceIcon
+              name="chevron"
+              class="h-4 w-4 transition"
+              :class="expandedFolderIds.includes(item.id) ? 'rotate-90' : ''"
+            />
+          </button>
+          <span v-else class="fd-tree-dot">·</span>
+
+          <button
+            type="button"
+            class="fd-tree-item"
+            :class="{
+              'fd-tree-item-selected': selectedDocumentId === item.id,
+              'fd-tree-item-ancestor': selectedAncestorIds.has(item.id),
+              'fd-tree-item-branch':
+                selectedPathIds.has(item.id) && selectedDocumentId !== item.id
+            }"
+            @click="selectNode(item)"
+          >
+            <span class="flex min-w-0 items-center gap-3">
+              <span class="fd-tree-icon">
+                <WorkspaceIcon
+                  :name="
+                    item.isFolder
+                      ? expandedFolderIds.includes(item.id)
+                        ? 'folder-open'
+                        : 'folder-closed'
+                      : 'file'
+                  "
+                  class="h-4 w-4"
+                />
+              </span>
+              <span
+                class="truncate text-[13px] font-medium sm:text-sm"
+                :title="item.title"
+              >
+                {{ item.title }}
+              </span>
+            </span>
+            <small class="fd-tree-version">v{{ item.version }}</small>
+          </button>
+        </div>
+
+        <div
+          v-if="treeItems.length === 0"
+          class="rounded-2xl border border-dashed border-[rgba(31,41,55,0.16)] px-4 py-6 text-sm leading-6 text-slate-500"
+        >
+          {{ t('workspace.noDocuments') }}
+        </div>
+      </div>
+    </aside>
 
     <button
       v-if="isMobileTreeOpen"
       type="button"
-      class="fd-mobile-tree-backdrop xl:hidden"
+      class="fd-mobile-tree-backdrop"
       aria-label="关闭目录面板"
       @click="isMobileTreeOpen = false"
     />
