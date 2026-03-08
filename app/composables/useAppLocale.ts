@@ -184,6 +184,30 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
       '目录也可以移动到其他目录下，移动后会一起带上它下面的所有子文档。',
     'workspace.uploadHint':
       '可直接拖拽图片进编辑器，或用工具栏插图。编辑区默认是实时预览风格：只有当前编辑行显示 Markdown 源码，其余内容按接近预览样式展示。',
+    'workspace.voiceStart': '开始语音',
+    'workspace.voiceStop': '停止语音',
+    'workspace.voicePanel': '语音追加',
+    'workspace.voiceAppend': '追加到文档',
+    'workspace.voiceTip': '说完后点击追加，会按当天日期自动补到 Markdown。',
+    'workspace.voiceUnsupported': '当前浏览器不支持语音识别。',
+    'workspace.voicePermissionGranted': '麦克风：已允许',
+    'workspace.voicePermissionPrompt': '麦克风：待授权',
+    'workspace.voicePermissionDenied': '麦克风：已拒绝',
+    'workspace.voicePermissionUnknown': '麦克风：状态未知',
+    'workspace.voicePermissionRefresh': '重新检查',
+    'workspace.voiceErrorDeniedManual':
+      '麦克风已被浏览器拒绝。请点地址栏左侧图标，把麦克风改为“允许”，再刷新页面。',
+    'workspace.voiceErrorNotAllowed':
+      '无法访问麦克风。请确认地址栏已允许麦克风，并检查系统麦克风隐私权限后重试。',
+    'workspace.voiceErrorNoMic': '未检测到可用麦克风设备。',
+    'workspace.voiceErrorNoSpeech': '没有识别到语音，请再说一次。',
+    'workspace.voiceErrorNetwork': '语音识别网络异常，请稍后重试。',
+    'workspace.voiceErrorAborted': '语音识别已取消。',
+    'workspace.voiceErrorServiceNotAllowed':
+      '浏览器语音识别服务不可用。可尝试更新浏览器、切换 Edge，或检查是否禁用了在线语音服务。',
+    'workspace.voiceErrorInsecureContext':
+      '当前页面不是安全上下文，麦克风不可用。请使用 localhost 或 HTTPS 访问。',
+    'workspace.voiceErrorGeneric': '语音识别失败，请重试。',
     'workspace.pickDocument': '从左侧树中选择一个文档开始阅读或编辑。',
     'audit.kicker': '审计',
     'audit.activity': ({ name }) => `${name} 活动记录`,
@@ -430,6 +454,34 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
       'Folders can also be moved into other folders, and their child documents move with them.',
     'workspace.uploadHint':
       'Drag images into the editor or use the toolbar image action. The editor now uses a live-preview style: only the active editing line shows Markdown source while surrounding content stays close to rendered formatting.',
+    'workspace.voiceStart': 'Start Voice',
+    'workspace.voiceStop': 'Stop Voice',
+    'workspace.voicePanel': 'Voice Append',
+    'workspace.voiceAppend': 'Append To Document',
+    'workspace.voiceTip':
+      "After speaking, append text to Markdown and it will be grouped under today's date.",
+    'workspace.voiceUnsupported':
+      'Speech recognition is not supported in this browser.',
+    'workspace.voicePermissionGranted': 'Mic: allowed',
+    'workspace.voicePermissionPrompt': 'Mic: waiting for permission',
+    'workspace.voicePermissionDenied': 'Mic: blocked',
+    'workspace.voicePermissionUnknown': 'Mic: unknown',
+    'workspace.voicePermissionRefresh': 'Recheck',
+    'workspace.voiceErrorDeniedManual':
+      'Microphone is blocked by browser settings. Set microphone to Allow for this site, then refresh.',
+    'workspace.voiceErrorNotAllowed':
+      'Microphone is not accessible. Allow microphone for this site and check OS privacy settings, then retry.',
+    'workspace.voiceErrorNoMic': 'No available microphone device was found.',
+    'workspace.voiceErrorNoSpeech':
+      'No speech was detected. Please try speaking again.',
+    'workspace.voiceErrorNetwork':
+      'Speech recognition network error. Please try again later.',
+    'workspace.voiceErrorAborted': 'Speech recognition was cancelled.',
+    'workspace.voiceErrorServiceNotAllowed':
+      'Browser speech service is unavailable. Try updating browser, switching to Edge, or enabling online speech services.',
+    'workspace.voiceErrorInsecureContext':
+      'Microphone is unavailable in an insecure context. Use localhost or HTTPS.',
+    'workspace.voiceErrorGeneric': 'Speech recognition failed. Please retry.',
     'workspace.pickDocument':
       'Pick a document from the tree to start reading or editing.',
     'audit.kicker': 'Audit',

@@ -27,6 +27,7 @@ defineProps<{
     | 'save'
     | 'logout'
     | 'users'
+    | 'voice'
     | 'word'
 }>()
 </script>
@@ -429,6 +430,22 @@ defineProps<{
     <path d="M10 4.5H6.5A1.5 1.5 0 0 0 5 6v12a1.5 1.5 0 0 0 1.5 1.5H10" />
     <path d="M14.5 8.5 19 12l-4.5 3.5" />
     <path d="M10.5 12H19" />
+  </svg>
+
+  <svg
+    v-else-if="name === 'voice'"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <rect x="9" y="4.5" width="6" height="10" rx="3" />
+    <path d="M6.5 11.5a5.5 5.5 0 0 0 11 0" />
+    <path d="M12 17v3.5" />
+    <path d="M9.5 20.5h5" />
   </svg>
 
   <svg

@@ -48,8 +48,19 @@ const isExportMenuOpen = ref(false)
 const isActionMenuOpen = ref(false)
 const isDocumentInfoOpen = ref(false)
 const isDeleteConfirmOpen = ref(false)
+const isVoicePanelOpen = ref(false)
 const isFullscreen = ref(false)
 const isMobileTreeOpen = ref(false)
+const speechSupported = ref(false)
+const speechListening = ref(false)
+const speechPermissionState = ref<'prompt' | 'granted' | 'denied' | 'unknown'>(
+  'unknown'
+)
+const speechError = ref('')
+const speechDraftText = ref('')
+const speechInterimText = ref('')
+const speechMicErrorCode = ref('')
+const speechRecognitionErrorCode = ref('')
 const conflictMessage = ref('')
 const saveState = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
 const autoSaveTimer = ref<ReturnType<typeof setTimeout> | null>(null)
@@ -71,6 +82,20 @@ const documentLoadFallbackTimer = ref<ReturnType<typeof setTimeout> | null>(
 const documentLoadToken = ref(0)
 const documentCache = new Map<number, DocumentDetail>()
 const prefetchingDocumentIds = new Set<number>()
+
+type SpeechRecognitionLike = {
+  lang: string
+  continuous: boolean
+  interimResults: boolean
+  onresult: ((event: SpeechRecognitionEvent) => void) | null
+  onerror: ((event: Event & { error?: string }) => void) | null
+  onend: (() => void) | null
+  start: () => void
+  stop: () => void
+  abort: () => void
+}
+
+const speechRecognition = ref<SpeechRecognitionLike | null>(null)
 
 const autoSaveDebounceMs = 2500
 const autoSaveIntervalMs = 60_000
@@ -208,6 +233,74 @@ function formatTimestamp(value: number | null | undefined) {
   const seconds = String(date.getSeconds()).padStart(2, '0')
 
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+}
+
+function formatTodayDateLabel() {
+  const date = new Date()
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function appendSpeechTextToMarkdown(content: string, text: string) {
+  const normalizedText = text.trim()
+
+  if (!normalizedText) {
+    return content
+  }
+
+  const lines = content.split('\n')
+  const dateHeading = `## ${formatTodayDateLabel()}`
+  const dateHeadingIndex = lines.findIndex(
+    (line) => line.trim() === dateHeading
+  )
+  const listLine = `- ${normalizedText}`
+
+  if (dateHeadingIndex < 0) {
+    const base = content.trimEnd()
+    return `${base ? `${base}\n\n` : ''}${dateHeading}\n\n${listLine}\n`
+  }
+
+  let nextHeadingIndex = lines.length
+
+  for (let index = dateHeadingIndex + 1; index < lines.length; index += 1) {
+    if (/^##\s+/.test(lines[index].trim())) {
+      nextHeadingIndex = index
+      break
+    }
+  }
+
+  const before = lines.slice(0, nextHeadingIndex)
+  const after = lines.slice(nextHeadingIndex)
+
+  while (before.length && !before[before.length - 1].trim()) {
+    before.pop()
+  }
+
+  before.push('')
+  before.push(listLine)
+
+  return [...before, ...after].join('\n')
+}
+
+function mapSpeechErrorMessage(errorCode?: string) {
+  switch (errorCode) {
+    case 'not-allowed':
+      return t('workspace.voiceErrorDeniedManual')
+    case 'service-not-allowed':
+      return t('workspace.voiceErrorServiceNotAllowed')
+    case 'audio-capture':
+      return t('workspace.voiceErrorNoMic')
+    case 'no-speech':
+      return t('workspace.voiceErrorNoSpeech')
+    case 'network':
+      return t('workspace.voiceErrorNetwork')
+    case 'aborted':
+      return t('workspace.voiceErrorAborted')
+    default:
+      return t('workspace.voiceErrorGeneric')
+  }
 }
 
 const isSpaceMenuOpen = ref(false)
@@ -656,6 +749,7 @@ watch(selectedDocument, (document) => {
   isActionMenuOpen.value = false
   isDocumentInfoOpen.value = false
   isDeleteConfirmOpen.value = false
+  isVoicePanelOpen.value = false
   moveTargetParentId.value = document?.parentId
     ? String(document.parentId)
     : 'root'
@@ -674,6 +768,16 @@ watch(
   }
 )
 
+watch(isEditing, (editing) => {
+  if (!editing && speechListening.value) {
+    stopSpeechRecognition()
+  }
+
+  if (!editing) {
+    isVoicePanelOpen.value = false
+  }
+})
+
 watch(isActionMenuOpen, (open) => {
   if (!open) {
     isExportMenuOpen.value = false
@@ -685,6 +789,8 @@ onMounted(() => {
     return
   }
 
+  initSpeechRecognition()
+  void updateSpeechPermissionState()
   document.addEventListener('fullscreenchange', syncFullscreenState)
   document.addEventListener('visibilitychange', handleVisibilityChange)
   window.addEventListener('beforeunload', handleBeforeUnload)
@@ -700,6 +806,7 @@ onBeforeUnmount(() => {
     return
   }
 
+  speechRecognition.value?.abort()
   document.removeEventListener('fullscreenchange', syncFullscreenState)
   document.removeEventListener('visibilitychange', handleVisibilityChange)
   window.removeEventListener('beforeunload', handleBeforeUnload)
@@ -728,6 +835,10 @@ function handleWindowKeydown(event: KeyboardEvent) {
 
   if (event.key === 'Escape' && isDocumentInfoOpen.value) {
     isDocumentInfoOpen.value = false
+  }
+
+  if (event.key === 'Escape' && isVoicePanelOpen.value) {
+    isVoicePanelOpen.value = false
   }
 }
 
@@ -841,6 +952,239 @@ function handleVisibilityChange() {
 
 function handleBeforeUnload() {
   void flushAutoSave()
+}
+
+const speechPreviewText = computed(() => {
+  return speechDraftText.value.trim()
+})
+
+const speechPermissionLabel = computed(() => {
+  if (!speechSupported.value) {
+    return t('workspace.voiceUnsupported')
+  }
+
+  switch (speechPermissionState.value) {
+    case 'granted':
+      return t('workspace.voicePermissionGranted')
+    case 'prompt':
+      return t('workspace.voicePermissionPrompt')
+    case 'denied':
+      return t('workspace.voicePermissionDenied')
+    default:
+      return t('workspace.voicePermissionUnknown')
+  }
+})
+
+function clearSpeechDraft() {
+  speechDraftText.value = ''
+  speechInterimText.value = ''
+}
+
+function initSpeechRecognition() {
+  if (!import.meta.client) {
+    return
+  }
+
+  const speechConstructor = (
+    window as typeof window & {
+      SpeechRecognition?: new () => SpeechRecognitionLike
+      webkitSpeechRecognition?: new () => SpeechRecognitionLike
+    }
+  ).SpeechRecognition
+    ? (
+        window as typeof window & {
+          SpeechRecognition: new () => SpeechRecognitionLike
+        }
+      ).SpeechRecognition
+    : (
+        window as typeof window & {
+          webkitSpeechRecognition?: new () => SpeechRecognitionLike
+        }
+      ).webkitSpeechRecognition
+
+  if (!speechConstructor) {
+    speechSupported.value = false
+    return
+  }
+
+  const recognition = new speechConstructor()
+  recognition.lang = 'zh-CN'
+  recognition.continuous = true
+  recognition.interimResults = true
+  recognition.onresult = (event) => {
+    let finalChunk = ''
+    let interimChunk = ''
+
+    for (
+      let resultIndex = event.resultIndex;
+      resultIndex < event.results.length;
+      resultIndex += 1
+    ) {
+      const result = event.results[resultIndex]
+      const transcript = result[0]?.transcript ?? ''
+
+      if (result.isFinal) {
+        finalChunk += transcript
+      } else {
+        interimChunk += transcript
+      }
+    }
+
+    if (finalChunk.trim()) {
+      speechDraftText.value = `${speechDraftText.value} ${finalChunk}`.trim()
+    }
+
+    speechInterimText.value = interimChunk.trim()
+  }
+  recognition.onerror = (event) => {
+    speechRecognitionErrorCode.value = event.error || ''
+    speechError.value = mapSpeechErrorMessage(event.error)
+    speechListening.value = false
+  }
+  recognition.onend = () => {
+    speechListening.value = false
+    speechInterimText.value = ''
+  }
+
+  speechRecognition.value = recognition
+  speechSupported.value = true
+}
+
+async function updateSpeechPermissionState() {
+  if (!import.meta.client) {
+    speechPermissionState.value = 'unknown'
+    return
+  }
+
+  if (!('permissions' in navigator) || !navigator.permissions?.query) {
+    speechPermissionState.value = 'unknown'
+    return
+  }
+
+  try {
+    const result = await navigator.permissions.query({
+      name: 'microphone' as PermissionName
+    })
+    speechPermissionState.value = result.state
+  } catch {
+    speechPermissionState.value = 'unknown'
+  }
+}
+
+async function ensureMicrophonePermission() {
+  if (!import.meta.client) {
+    return false
+  }
+
+  if (!window.isSecureContext) {
+    speechError.value = t('workspace.voiceErrorInsecureContext')
+    speechMicErrorCode.value = 'insecure-context'
+    return false
+  }
+
+  await updateSpeechPermissionState()
+
+  if (!navigator.mediaDevices?.getUserMedia) {
+    return true
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    for (const track of stream.getTracks()) {
+      track.stop()
+    }
+    speechPermissionState.value = 'granted'
+    speechError.value = ''
+    speechMicErrorCode.value = ''
+    return true
+  } catch (error) {
+    const mediaError = error as { name?: string }
+    const errorName = mediaError.name?.toLowerCase()
+    speechMicErrorCode.value = errorName || 'unknown'
+    speechPermissionState.value =
+      errorName === 'notallowederror' || errorName === 'securityerror'
+        ? 'denied'
+        : speechPermissionState.value
+    speechError.value =
+      errorName === 'notallowederror' || errorName === 'securityerror'
+        ? t('workspace.voiceErrorNotAllowed')
+        : errorName === 'notfounderror' || errorName === 'devicesnotfounderror'
+          ? t('workspace.voiceErrorNoMic')
+          : t('workspace.voiceErrorGeneric')
+    return false
+  } finally {
+    await updateSpeechPermissionState()
+  }
+}
+
+async function recheckMicrophonePermission() {
+  speechError.value = ''
+  speechRecognitionErrorCode.value = ''
+  await ensureMicrophonePermission()
+}
+
+async function startSpeechRecognition() {
+  const recognition = speechRecognition.value
+
+  if (!recognition || speechListening.value) {
+    return
+  }
+
+  speechError.value = ''
+  clearSpeechDraft()
+  const hasMicrophonePermission = await ensureMicrophonePermission()
+
+  if (
+    !hasMicrophonePermission &&
+    (speechMicErrorCode.value === 'notfounderror' ||
+      speechMicErrorCode.value === 'devicesnotfounderror' ||
+      speechMicErrorCode.value === 'insecure-context')
+  ) {
+    return
+  }
+
+  try {
+    recognition.start()
+    speechListening.value = true
+  } catch {
+    speechListening.value = false
+    speechError.value = t('workspace.voiceErrorDeniedManual')
+  }
+}
+
+function stopSpeechRecognition() {
+  const recognition = speechRecognition.value
+
+  if (!recognition) {
+    return
+  }
+
+  recognition.stop()
+  speechListening.value = false
+}
+
+function appendSpeechToDraft() {
+  const recognizedText = speechDraftText.value.trim()
+
+  if (!recognizedText) {
+    return
+  }
+
+  draft.content = appendSpeechTextToMarkdown(draft.content, recognizedText)
+  saveState.value = 'idle'
+  clearSpeechDraft()
+}
+
+function openVoicePanelFromActionMenu() {
+  isActionMenuOpen.value = false
+  isVoicePanelOpen.value = true
+}
+
+function closeVoicePanel() {
+  if (speechListening.value) {
+    stopSpeechRecognition()
+  }
+  isVoicePanelOpen.value = false
 }
 
 async function loadDocument(
@@ -1706,6 +2050,16 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
               <WorkspaceIcon name="move" class="h-4 w-4" />
             </button>
             <button
+              v-if="canEdit && isFileDocument && isEditing"
+              type="button"
+              class="fd-action-menu-item"
+              :title="t('workspace.voicePanel')"
+              :aria-label="t('workspace.voicePanel')"
+              @click="openVoicePanelFromActionMenu"
+            >
+              <WorkspaceIcon name="voice" class="h-4 w-4" />
+            </button>
+            <button
               v-if="isFileDocument"
               type="button"
               class="fd-action-menu-item"
@@ -1969,6 +2323,102 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
 
         <div v-else class="fd-document-stage mt-3 flex min-h-0 flex-1 flex-col">
           <div v-if="isEditing" class="fd-editor-stage">
+            <div
+              v-if="isVoicePanelOpen"
+              class="fd-voice-float rounded-xl border p-3"
+            >
+              <div class="flex items-center justify-between gap-2">
+                <p
+                  class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"
+                >
+                  {{ t('workspace.voicePanel') }}
+                </p>
+                <button
+                  type="button"
+                  class="fd-icon-button"
+                  :title="t('common.cancel')"
+                  :aria-label="t('common.cancel')"
+                  @click="closeVoicePanel"
+                >
+                  <WorkspaceIcon name="close" class="h-4 w-4" />
+                </button>
+              </div>
+              <div class="mt-2 flex flex-wrap items-center gap-2">
+                <button
+                  v-if="speechSupported && !speechListening"
+                  type="button"
+                  class="fd-icon-button"
+                  :title="t('workspace.voiceStart')"
+                  :aria-label="t('workspace.voiceStart')"
+                  @click="startSpeechRecognition"
+                >
+                  <WorkspaceIcon name="voice" class="h-4 w-4" />
+                </button>
+                <button
+                  v-if="speechSupported && speechListening"
+                  type="button"
+                  class="fd-icon-button fd-icon-button-danger"
+                  :title="t('workspace.voiceStop')"
+                  :aria-label="t('workspace.voiceStop')"
+                  @click="stopSpeechRecognition"
+                >
+                  <WorkspaceIcon name="voice" class="h-4 w-4" />
+                </button>
+                <button
+                  v-if="speechSupported"
+                  type="button"
+                  class="fd-icon-button"
+                  :title="t('workspace.voiceAppend')"
+                  :aria-label="t('workspace.voiceAppend')"
+                  :disabled="!speechPreviewText"
+                  @click="appendSpeechToDraft"
+                >
+                  <WorkspaceIcon name="plus-file" class="h-4 w-4" />
+                </button>
+                <button
+                  v-if="speechSupported"
+                  type="button"
+                  class="fd-icon-button"
+                  :title="t('common.cancel')"
+                  :aria-label="t('common.cancel')"
+                  :disabled="!speechPreviewText"
+                  @click="clearSpeechDraft"
+                >
+                  <WorkspaceIcon name="close" class="h-4 w-4" />
+                </button>
+                <span
+                  class="rounded-full border px-2 py-0.5 text-[11px] font-medium text-slate-600"
+                >
+                  {{ speechPermissionLabel }}
+                </span>
+                <button
+                  v-if="speechSupported"
+                  type="button"
+                  class="rounded-full border px-2 py-0.5 text-[11px] font-medium text-slate-600 transition hover:bg-[rgba(15,23,42,0.04)]"
+                  @click="recheckMicrophonePermission"
+                >
+                  {{ t('workspace.voicePermissionRefresh') }}
+                </button>
+              </div>
+              <p class="mt-2 text-xs text-slate-500">
+                {{
+                  speechSupported
+                    ? t('workspace.voiceTip')
+                    : t('workspace.voiceUnsupported')
+                }}
+              </p>
+              <textarea
+                v-model="speechDraftText"
+                class="fd-voice-textarea mt-2 w-full rounded-lg border px-2 py-2 text-sm text-slate-700"
+                rows="4"
+              />
+              <p v-if="speechInterimText" class="mt-1 text-xs text-slate-400">
+                {{ speechInterimText }}
+              </p>
+              <p v-if="speechError" class="mt-2 text-xs text-rose-600">
+                {{ speechError }}
+              </p>
+            </div>
             <MarkdownEditor
               :key="`editor-${selectedDocument.id}-${editorRenderKey}`"
               v-model="draft.content"

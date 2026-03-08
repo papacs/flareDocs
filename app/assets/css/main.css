@@ -1956,6 +1956,26 @@ body {
   .fd-editor-stage {
     @apply flex min-h-0 flex-1 flex-col;
     overflow: hidden;
+    position: relative;
+  }
+
+  .fd-voice-float {
+    position: absolute;
+    top: 0.4rem;
+    right: 0.45rem;
+    z-index: 20;
+    width: min(30rem, calc(100% - 0.9rem));
+    border-color: rgba(31, 41, 55, 0.12);
+    background: rgba(255, 252, 247, 0.96);
+    box-shadow: 0 14px 28px rgba(31, 41, 55, 0.14);
+    backdrop-filter: blur(8px);
+  }
+
+  .fd-voice-textarea {
+    border-color: rgba(31, 41, 55, 0.14);
+    background: rgba(255, 255, 255, 0.82);
+    resize: vertical;
+    min-height: 5.5rem;
   }
 
   .fd-editor-shell {
@@ -2405,6 +2425,22 @@ body {
       rgba(10, 19, 44, 0.96),
       rgba(9, 16, 38, 0.95)
     );
+  }
+
+  html.fd-theme-dark .fd-voice-float {
+    border-color: rgba(148, 163, 184, 0.24);
+    background: rgba(15, 23, 42, 0.94);
+    box-shadow: 0 18px 34px rgba(2, 6, 23, 0.5);
+  }
+
+  html.fd-theme-dark .fd-voice-float .text-slate-600 {
+    color: #9fb3cc !important;
+  }
+
+  html.fd-theme-dark .fd-voice-textarea {
+    border-color: rgba(148, 163, 184, 0.26);
+    background: rgba(30, 41, 59, 0.78);
+    color: #dbe6f5;
   }
 
   html.fd-theme-dark .fd-editor-shell .bytemd-toolbar {
