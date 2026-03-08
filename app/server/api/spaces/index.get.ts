@@ -1,10 +1,13 @@
-import { desc, eq } from 'drizzle-orm'
+import { desc, eq, inArray, sql } from 'drizzle-orm'
 
-import { spaceMembers, spaces } from '../../../../db/schema'
+import { documents, spaceMembers, spaces } from '../../../../db/schema'
 import { getAuthenticatedUser } from '../../utils/auth'
 import { getDb } from '../../utils/db'
 import { ok } from '../../utils/response'
-import { ensurePersonalWorkspace, isPersonalWorkspace } from '../../utils/spaces'
+import {
+  ensurePersonalWorkspace,
+  isPersonalWorkspace
+} from '../../utils/spaces'
 
 export default defineEventHandler(async (event) => {
   const db = getDb(event)
@@ -17,7 +20,8 @@ export default defineEventHandler(async (event) => {
       slug: spaces.slug,
       visibility: spaces.visibility,
       createdBy: spaces.createdBy,
-      createdAt: spaces.createdAt
+      createdAt: spaces.createdAt,
+      documentCount: sql<number>`0`
     })
     .from(spaces)
     .where(eq(spaces.visibility, 'public'))
@@ -43,6 +47,7 @@ export default defineEventHandler(async (event) => {
       visibility: spaces.visibility,
       createdBy: spaces.createdBy,
       createdAt: spaces.createdAt,
+      documentCount: sql<number>`0`,
       myRole: spaceMembers.roleInSpace
     })
     .from(spaceMembers)
@@ -59,6 +64,7 @@ export default defineEventHandler(async (event) => {
       visibility: 'private' | 'team' | 'public'
       createdBy: number | null
       createdAt: number
+      documentCount: number
       isPersonal: boolean
       myRole: 'admin' | 'editor' | 'viewer' | null
     }
@@ -79,7 +85,31 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  const spaceList = [...dedupedSpaces.values()]
+  const spaceIds = spaceList.map((space) => space.id)
+  const documentCountBySpaceId = new Map<number, number>()
+
+  if (spaceIds.length) {
+    const documentCounts = await db
+      .select({
+        spaceId: documents.spaceId,
+        count: sql<number>`cast(count(*) as int)`
+      })
+      .from(documents)
+      .where(inArray(documents.spaceId, spaceIds))
+      .groupBy(documents.spaceId)
+
+    for (const row of documentCounts) {
+      documentCountBySpaceId.set(row.spaceId, row.count)
+    }
+  }
+
   return ok({
-    spaces: [...dedupedSpaces.values()].sort((left, right) => right.createdAt - left.createdAt)
+    spaces: spaceList
+      .map((space) => ({
+        ...space,
+        documentCount: documentCountBySpaceId.get(space.id) ?? 0
+      }))
+      .sort((left, right) => right.createdAt - left.createdAt)
   })
 })

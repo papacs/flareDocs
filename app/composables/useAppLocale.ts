@@ -125,6 +125,7 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'index.slug': ({ slug }) => `Slug：${slug}`,
     'index.role': '角色',
     'index.open': '打开',
+    'index.documentsCount': ({ count }) => `文档 ${count}`,
     'index.noSpaces': '还没有空间',
     'index.noSpacesHint':
       '登录后创建第一个空间，或者后续开放公开空间供访客阅读。',
@@ -399,6 +400,7 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'index.slug': ({ slug }) => `Slug: ${slug}`,
     'index.role': 'Role',
     'index.open': 'Open',
+    'index.documentsCount': ({ count }) => `Docs ${count}`,
     'index.noSpaces': 'No spaces yet',
     'index.noSpacesHint':
       'Create the first space after logging in, or expose a public space later for guest read access.',

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'flaredocs-shell-v1'
+const CACHE_NAME = 'flaredocs-shell-v2'
 const SHELL_ASSETS = ['/', '/manifest.webmanifest', '/brand-icon.svg']
 
 self.addEventListener('install', (event) => {
@@ -25,8 +25,18 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const request = event.request
+  const url = new URL(request.url)
 
   if (request.method !== 'GET') {
+    return
+  }
+
+  if (url.origin !== self.location.origin) {
+    return
+  }
+
+  // Never cache API responses, auth state, or captcha data.
+  if (url.pathname.startsWith('/api/')) {
     return
   }
 
@@ -47,6 +57,27 @@ self.addEventListener('fetch', (event) => {
 
       return fetch(request)
         .then((networkResponse) => {
+          if (!networkResponse.ok || networkResponse.type !== 'basic') {
+            return networkResponse
+          }
+
+          const isStaticAsset =
+            url.pathname.startsWith('/_nuxt/') ||
+            url.pathname.startsWith('/images/') ||
+            url.pathname.endsWith('.css') ||
+            url.pathname.endsWith('.js') ||
+            url.pathname.endsWith('.svg') ||
+            url.pathname.endsWith('.png') ||
+            url.pathname.endsWith('.jpg') ||
+            url.pathname.endsWith('.jpeg') ||
+            url.pathname.endsWith('.webp') ||
+            url.pathname.endsWith('.woff2') ||
+            url.pathname.endsWith('.webmanifest')
+
+          if (!isStaticAsset) {
+            return networkResponse
+          }
+
           const cloned = networkResponse.clone()
           caches.open(CACHE_NAME).then((cache) => cache.put(request, cloned))
           return networkResponse

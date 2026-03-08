@@ -526,6 +526,8 @@ Get-Content "C:\Users\<your-user>\AppData\Roaming\xdg.config\.wrangler\logs\<log
 - 若启用语音追加，服务端 `Permissions-Policy` 需允许同源麦克风访问（`microphone=(self)`），否则即使浏览器站点权限显示“允许”也会被策略头拦截
 - 语音追加会将“当天日期节（`## YYYY-MM-DD`）”置于文档顶部并在该节下追加内容；录音中麦克风图标会闪烁提示，面板中冗余清空按钮已移除
 - 已支持 PWA 基础安装：主页提供“安装到桌面”入口；支持 `beforeinstallprompt` 的浏览器可一键安装，iOS Safari 会显示“分享 -> 添加到主屏幕”的引导提示
+- PWA Service Worker 已调整为仅缓存静态资源，不缓存 `/api/*` 接口，避免登录态与空间列表被旧缓存污染（尤其跨设备/刷新场景）
+- 首页工作区卡片名称下新增文档数量展示，便于快速判断每个空间内容规模
 
 ## 任务与进度
 

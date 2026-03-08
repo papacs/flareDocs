@@ -1179,6 +1179,9 @@ async function saveProfile() {
             <h2 class="mt-3 text-2xl font-semibold text-slate-800">
               {{ space.name }}
             </h2>
+            <p class="mt-1 text-sm text-slate-500">
+              {{ t('index.documentsCount', { count: space.documentCount }) }}
+            </p>
           </div>
           <div class="flex items-center gap-2">
             <NuxtLink

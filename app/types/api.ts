@@ -30,6 +30,7 @@ export type SpaceSummary = {
   visibility: 'private' | 'team' | 'public'
   createdBy: number | null
   createdAt: number
+  documentCount: number
   isPersonal: boolean
   myRole: 'admin' | 'editor' | 'viewer' | null
 }

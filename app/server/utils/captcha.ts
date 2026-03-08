@@ -53,7 +53,7 @@ function randomInt(min: number, max: number) {
 }
 
 function normalizeCaptchaInput(value: string) {
-  return value.trim().replace(/\s+/g, '')
+  return value.normalize('NFKC').trim().replace(/\s+/g, '')
 }
 
 function base64UrlEncode(bytes: Uint8Array) {
@@ -63,12 +63,22 @@ function base64UrlEncode(bytes: Uint8Array) {
     binary += String.fromCharCode(byte)
   }
 
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
+  return btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/g, '')
 }
 
-async function buildCaptchaAnswerHash(event: H3Event, nonce: string, answer: string) {
+async function buildCaptchaAnswerHash(
+  event: H3Event,
+  nonce: string,
+  answer: string
+) {
   const payload = `${nonce}:${normalizeCaptchaInput(answer)}:${getCaptchaSecretText(event)}`
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(payload))
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(payload)
+  )
   return base64UrlEncode(new Uint8Array(digest))
 }
 
@@ -187,7 +197,11 @@ export async function issueCaptchaChallenge(event: H3Event) {
   const expression = generateExpression()
   const nonce = crypto.randomUUID()
   const challengeId = crypto.randomUUID()
-  const answerHash = await buildCaptchaAnswerHash(event, nonce, expression.answer)
+  const answerHash = await buildCaptchaAnswerHash(
+    event,
+    nonce,
+    expression.answer
+  )
   const tokenPayload: CaptchaTokenPayload = {
     type: 'captcha',
     nonce,
@@ -208,12 +222,20 @@ export async function issueCaptchaChallenge(event: H3Event) {
   }
 }
 
-export async function verifyCaptchaChallenge(event: H3Event, token: string, input: string) {
+export async function verifyCaptchaChallenge(
+  event: H3Event,
+  token: string,
+  input: string
+) {
   try {
     cleanupUsedChallenges(Date.now())
-    const { payload } = await jwtVerify<CaptchaTokenPayload>(token, getCaptchaSecret(event), {
-      algorithms: ['HS256']
-    })
+    const { payload } = await jwtVerify<CaptchaTokenPayload>(
+      token,
+      getCaptchaSecret(event),
+      {
+        algorithms: ['HS256']
+      }
+    )
 
     if (
       payload.type !== 'captcha' ||
@@ -228,9 +250,16 @@ export async function verifyCaptchaChallenge(event: H3Event, token: string, inpu
       return false
     }
 
-    usedCaptchaChallenges.set(payload.challengeId, Date.now() + USED_CHALLENGE_TTL_MS)
+    usedCaptchaChallenges.set(
+      payload.challengeId,
+      Date.now() + USED_CHALLENGE_TTL_MS
+    )
 
-    const actualAnswerHash = await buildCaptchaAnswerHash(event, payload.nonce, input)
+    const actualAnswerHash = await buildCaptchaAnswerHash(
+      event,
+      payload.nonce,
+      input
+    )
     return timingSafeEqual(payload.answerHash, actualAnswerHash)
   } catch {
     return false
