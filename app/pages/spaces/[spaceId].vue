@@ -61,6 +61,15 @@ const documentPanelRef = ref<HTMLElement | null>(null)
 const documentScrollRef = ref<HTMLElement | null>(null)
 const readingProgress = ref(0)
 const editorRenderKey = ref(0)
+const documentLoadPending = ref(false)
+const documentLoadProgress = ref(0)
+const documentLoadTimer = ref<ReturnType<typeof setInterval> | null>(null)
+const documentLoadFallbackTimer = ref<ReturnType<typeof setTimeout> | null>(
+  null
+)
+const documentLoadToken = ref(0)
+const documentCache = new Map<number, DocumentDetail>()
+const prefetchingDocumentIds = new Set<number>()
 
 const autoSaveDebounceMs = 2500
 const autoSaveIntervalMs = 60_000
@@ -171,6 +180,7 @@ const treeItems = computed(() =>
 const treeItemMap = computed(
   () => new Map(treeItems.value.map((item) => [item.id, item]))
 )
+const expandedFolderIdSet = computed(() => new Set(expandedFolderIds.value))
 
 const selectedDocument = ref<DocumentDetail | null>(null)
 
@@ -353,7 +363,7 @@ const treeNodes = computed<TreeNode[]>(() => {
 
 const visibleTreeNodes = computed<TreeNode[]>(() => {
   const flattened: TreeNode[] = []
-  const expanded = new Set(expandedFolderIds.value)
+  const expanded = expandedFolderIdSet.value
 
   function visit(nodes: TreeNode[]) {
     for (const node of nodes) {
@@ -467,10 +477,74 @@ function collapseAllFolders() {
   expandedFolderIds.value = []
 }
 
+function clearDocumentLoadTimer() {
+  if (!documentLoadTimer.value) {
+    return
+  }
+
+  clearInterval(documentLoadTimer.value)
+  documentLoadTimer.value = null
+}
+
+function clearDocumentLoadFallbackTimer() {
+  if (!documentLoadFallbackTimer.value) {
+    return
+  }
+
+  clearTimeout(documentLoadFallbackTimer.value)
+  documentLoadFallbackTimer.value = null
+}
+
+function startDocumentLoadProgress() {
+  if (!import.meta.client) {
+    return
+  }
+
+  clearDocumentLoadTimer()
+  clearDocumentLoadFallbackTimer()
+  documentLoadPending.value = true
+  documentLoadProgress.value = Math.max(8, documentLoadProgress.value || 0)
+
+  documentLoadTimer.value = setInterval(() => {
+    documentLoadProgress.value = Math.min(
+      92,
+      documentLoadProgress.value +
+        Math.max(1, (92 - documentLoadProgress.value) * 0.18)
+    )
+  }, 120)
+
+  documentLoadFallbackTimer.value = setTimeout(() => {
+    resetDocumentLoadProgress()
+  }, 15_000)
+}
+
+function finishDocumentLoadProgress() {
+  if (!import.meta.client) {
+    return
+  }
+
+  clearDocumentLoadTimer()
+  clearDocumentLoadFallbackTimer()
+  documentLoadProgress.value = 100
+  setTimeout(() => {
+    documentLoadPending.value = false
+    documentLoadProgress.value = 0
+  }, 180)
+}
+
+function resetDocumentLoadProgress() {
+  clearDocumentLoadTimer()
+  clearDocumentLoadFallbackTimer()
+  documentLoadPending.value = false
+  documentLoadProgress.value = 0
+}
+
 watch(
   spaceId,
   () => {
     treeReady.value = false
+    documentCache.clear()
+    prefetchingDocumentIds.clear()
     restoreExpandedFolders()
   },
   { immediate: true }
@@ -541,7 +615,7 @@ watch(
     }
 
     expandDocumentPath(selectedDocumentId.value)
-    await loadDocument(selectedDocumentId.value)
+    await loadDocument(selectedDocumentId.value, { background: true })
   },
   { immediate: true }
 )
@@ -629,6 +703,8 @@ onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload)
   window.removeEventListener('keydown', handleWindowKeydown)
   clearAutoSaveTimer()
+  clearDocumentLoadTimer()
+  clearDocumentLoadFallbackTimer()
   if (autoSaveInterval.value) {
     clearInterval(autoSaveInterval.value)
     autoSaveInterval.value = null
@@ -765,10 +841,52 @@ function handleBeforeUnload() {
   void flushAutoSave()
 }
 
-async function loadDocument(documentId: number | null) {
+async function loadDocument(
+  documentId: number | null,
+  options: { force?: boolean; background?: boolean } = {}
+) {
   if (!documentId) {
     selectedDocument.value = null
+    if (!options.background) {
+      resetDocumentLoadProgress()
+    }
     return
+  }
+
+  const treeVersion = treeItemMap.value.get(documentId)?.version
+  const cached = documentCache.get(documentId)
+  const canUseCache =
+    !options.force &&
+    cached &&
+    (treeVersion == null || cached.version === treeVersion)
+
+  if (canUseCache) {
+    workspaceError.value = ''
+    if (!options.background || selectedDocumentId.value === documentId) {
+      selectedDocument.value = { ...cached }
+      syncDraft()
+    }
+
+    if (
+      options.background &&
+      selectedDocumentId.value === documentId &&
+      documentLoadPending.value
+    ) {
+      finishDocumentLoadProgress()
+    }
+
+    if (!options.background) {
+      resetDocumentLoadProgress()
+      return
+    }
+  }
+
+  const loadToken = options.background
+    ? documentLoadToken.value
+    : ++documentLoadToken.value
+
+  if (!options.background) {
+    startDocumentLoadProgress()
   }
 
   try {
@@ -780,19 +898,42 @@ async function loadDocument(documentId: number | null) {
       }
     )
 
+    if (!options.background && loadToken !== documentLoadToken.value) {
+      return
+    }
+
     if (response.ok) {
       workspaceError.value = ''
-      selectedDocument.value = response.data.document
-      syncDraft()
+      documentCache.set(documentId, response.data.document)
+      if (!options.background || selectedDocumentId.value === documentId) {
+        selectedDocument.value = response.data.document
+        syncDraft()
+      }
+
+      if (
+        options.background &&
+        selectedDocumentId.value === documentId &&
+        documentLoadPending.value
+      ) {
+        finishDocumentLoadProgress()
+      }
       return
     }
 
     selectedDocument.value = null
     workspaceError.value = response.error.message
   } catch (error: unknown) {
+    if (!options.background && loadToken !== documentLoadToken.value) {
+      return
+    }
+
     selectedDocument.value = null
     workspaceError.value =
       error instanceof Error ? error.message : 'Unable to load document.'
+  } finally {
+    if (!options.background && loadToken === documentLoadToken.value) {
+      finishDocumentLoadProgress()
+    }
   }
 }
 
@@ -820,6 +961,26 @@ function selectNode(node: TreeNode | DocumentTreeItem) {
   expandDocumentPath(node.id)
   isMobileTreeOpen.value = false
   isActionMenuOpen.value = false
+}
+
+function prefetchDocument(node: TreeNode | DocumentTreeItem) {
+  if (node.isFolder || prefetchingDocumentIds.has(node.id)) {
+    return
+  }
+
+  const treeVersion = treeItemMap.value.get(node.id)?.version
+  const cached = documentCache.get(node.id)
+
+  if (cached && (treeVersion == null || cached.version === treeVersion)) {
+    return
+  }
+
+  prefetchingDocumentIds.add(node.id)
+  void loadDocument(node.id, { background: true })
+    .catch(() => undefined)
+    .finally(() => {
+      prefetchingDocumentIds.delete(node.id)
+    })
 }
 
 function startEdit() {
@@ -925,6 +1086,7 @@ async function saveDocument(options?: {
 
     if (response.ok) {
       selectedDocument.value = response.data.document
+      documentCache.set(response.data.document.id, response.data.document)
       saveState.value = 'saved'
       if (!keepEditing) {
         isEditing.value = false
@@ -1049,6 +1211,7 @@ async function deleteDocument() {
     })
 
     selectedDocument.value = null
+    documentCache.clear()
     selectedDocumentId.value = null
     await refreshTree()
   } finally {
@@ -1086,6 +1249,7 @@ async function moveDocument() {
 
     if (response.ok) {
       selectedDocument.value = response.data.document
+      documentCache.set(response.data.document.id, response.data.document)
       isMovePanelOpen.value = false
       await refreshTree()
       expandDocumentPath(response.data.document.id)
@@ -1392,6 +1556,18 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
       ref="documentPanelRef"
       class="fd-document-panel fd-document-panel-immersive order-1 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.5rem] border border-[rgba(31,41,55,0.08)] p-3 shadow-[0_22px_44px_rgba(31,41,55,0.08)] sm:p-4 md:order-2"
     >
+      <div v-if="documentLoadPending" class="fd-doc-loadbar" aria-hidden="true">
+        <div class="fd-doc-loadbar-track">
+          <div
+            class="fd-doc-loadbar-fill"
+            :style="{ width: `${Math.max(6, documentLoadProgress)}%` }"
+          />
+        </div>
+        <span class="fd-doc-loadbar-label"
+          >{{ Math.round(documentLoadProgress) }}%</span
+        >
+      </div>
+
       <template v-if="selectedDocument">
         <button
           v-if="isActionMenuOpen"
@@ -1962,7 +2138,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
             <WorkspaceIcon
               name="chevron"
               class="h-4 w-4 transition"
-              :class="expandedFolderIds.includes(item.id) ? 'rotate-90' : ''"
+              :class="expandedFolderIdSet.has(item.id) ? 'rotate-90' : ''"
             />
           </button>
           <span v-else class="fd-tree-dot">·</span>
@@ -1976,6 +2152,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
               'fd-tree-item-branch':
                 selectedPathIds.has(item.id) && selectedDocumentId !== item.id
             }"
+            @mouseenter="prefetchDocument(item)"
             @click="selectNode(item)"
           >
             <span class="flex min-w-0 items-center gap-3">
@@ -1983,7 +2160,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
                 <WorkspaceIcon
                   :name="
                     item.isFolder
-                      ? expandedFolderIds.includes(item.id)
+                      ? expandedFolderIdSet.has(item.id)
                         ? 'folder-open'
                         : 'folder-closed'
                       : 'file'
