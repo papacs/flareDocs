@@ -27,6 +27,7 @@ const requestHeaders = import.meta.server
   ? useRequestHeaders(['cookie'])
   : undefined
 const recentSpaceStorageKey = 'fd-recent-space-id'
+const mobileTreeRestoreStorageKey = 'fd-mobile-tree-open-once'
 
 const spaceId = computed(() => Number(route.params.spaceId))
 const treeStorageKey = computed(() => `fd-tree-expanded:${spaceId.value}`)
@@ -373,7 +374,14 @@ async function selectWorkspace(nextSpaceId: number) {
     return
   }
 
-  isMobileTreeOpen.value = false
+  if (import.meta.client && isMobileTreeOpen.value) {
+    const isMobileViewport = window.matchMedia('(max-width: 767px)').matches
+
+    if (isMobileViewport) {
+      window.sessionStorage.setItem(mobileTreeRestoreStorageKey, '1')
+    }
+  }
+
   await navigateTo(`/spaces/${nextSpaceId}`)
 }
 
@@ -749,7 +757,12 @@ watch(
     }
 
     expandDocumentPath(selectedDocumentId.value)
-    await loadDocument(selectedDocumentId.value, { background: true })
+
+    // Keep editor cursor stable while typing: do not background-refresh
+    // the current document during edit mode.
+    if (!isEditing.value) {
+      await loadDocument(selectedDocumentId.value, { background: true })
+    }
   },
   { immediate: true }
 )
@@ -827,6 +840,11 @@ watch(isActionMenuOpen, (open) => {
 onMounted(() => {
   if (!import.meta.client) {
     return
+  }
+
+  if (window.sessionStorage.getItem(mobileTreeRestoreStorageKey) === '1') {
+    isMobileTreeOpen.value = true
+    window.sessionStorage.removeItem(mobileTreeRestoreStorageKey)
   }
 
   initSpeechRecognition()
@@ -1292,8 +1310,23 @@ async function loadDocument(
       workspaceError.value = ''
       documentCache.set(documentId, response.data.document)
       if (!options.background || selectedDocumentId.value === documentId) {
-        selectedDocument.value = response.data.document
-        syncDraft()
+        if (
+          options.background &&
+          isEditing.value &&
+          selectedDocument.value?.id === documentId &&
+          !selectedDocument.value.isFolder
+        ) {
+          // Avoid resetting draft/model while editing; only refresh metadata.
+          selectedDocument.value = {
+            ...selectedDocument.value,
+            version: response.data.document.version,
+            updatedAt: response.data.document.updatedAt,
+            updatedByName: response.data.document.updatedByName
+          }
+        } else {
+          selectedDocument.value = response.data.document
+          syncDraft()
+        }
       }
 
       if (

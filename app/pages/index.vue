@@ -88,7 +88,7 @@ const deleteSpaceTarget = computed(
 
 const createForm = reactive({
   name: '',
-  visibility: 'team'
+  visibility: 'private'
 })
 const visibilityOptions = computed(() => [
   { value: 'private', label: t('index.privateOnly') },
@@ -104,6 +104,7 @@ const isCreateFormValid = computed(
 
 const createError = ref('')
 const createPending = ref(false)
+const isCreateSpaceModalOpen = ref(false)
 const logoutPending = ref(false)
 const deleteSpacePendingId = ref<number | null>(null)
 const deleteSpaceTargetId = ref<number | null>(null)
@@ -466,9 +467,11 @@ async function createSpace() {
     )
 
     createForm.name = ''
+    createForm.visibility = 'private'
     await refreshSpaces()
 
     if (response.ok) {
+      isCreateSpaceModalOpen.value = false
       await navigateTo(`/spaces/${response.data.space.id}`)
     }
   } catch (error) {
@@ -482,6 +485,13 @@ async function createSpace() {
   } finally {
     createPending.value = false
   }
+}
+
+function openCreateSpaceModal() {
+  createError.value = ''
+  createForm.name = ''
+  createForm.visibility = 'private'
+  isCreateSpaceModalOpen.value = true
 }
 
 async function logout() {
@@ -819,7 +829,7 @@ async function saveProfile() {
               <BrandMark size="sm" />
               <div class="flex items-center gap-2">
                 <a
-                  class="fd-home-icon-link"
+                  class="fd-home-icon-link hidden sm:inline-flex"
                   :href="githubRepoUrl"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -833,26 +843,15 @@ async function saveProfile() {
                   color="neutral"
                   variant="ghost"
                   size="sm"
-                  class="h-9 w-9 justify-center p-0"
+                  class="hidden h-9 w-9 justify-center p-0 sm:inline-flex"
                   :title="t('index.installApp')"
                   :aria-label="t('index.installApp')"
                   @click="triggerInstall"
                 >
                   <WorkspaceIcon name="install" class="h-4 w-4" />
                 </UButton>
-                <div class="flex items-center gap-2 sm:hidden">
+                <div class="flex shrink-0 items-center gap-1.5 sm:hidden">
                   <template v-if="currentUser">
-                    <UButton
-                      color="neutral"
-                      variant="ghost"
-                      size="sm"
-                      class="h-9 w-9 justify-center p-0"
-                      :title="t('index.profileSettings')"
-                      :aria-label="t('index.profileSettings')"
-                      @click="settingsOpen = !settingsOpen"
-                    >
-                      <WorkspaceIcon name="settings" class="h-4 w-4" />
-                    </UButton>
                     <UButton
                       v-if="currentUser.isSystemAdmin"
                       color="neutral"
@@ -864,6 +863,17 @@ async function saveProfile() {
                       to="/admin/users"
                     >
                       <WorkspaceIcon name="users" class="h-4 w-4" />
+                    </UButton>
+                    <UButton
+                      color="neutral"
+                      variant="ghost"
+                      size="sm"
+                      class="h-9 w-9 justify-center p-0"
+                      :title="t('index.profileSettings')"
+                      :aria-label="t('index.profileSettings')"
+                      @click="settingsOpen = !settingsOpen"
+                    >
+                      <WorkspaceIcon name="settings" class="h-4 w-4" />
                     </UButton>
                     <UButton
                       color="neutral"
@@ -919,32 +929,19 @@ async function saveProfile() {
                   {{ t('index.openWorkspace') }}
                 </UButton>
                 <UButton
-                  v-if="personalWorkspace"
                   size="lg"
                   color="neutral"
                   variant="ghost"
-                  :to="`/spaces/${personalWorkspace.id}`"
+                  @click="openCreateSpaceModal"
                 >
-                  {{ t('index.openPersonalWorkspace') }}
+                  {{ t('index.createSpace') }}
                 </UButton>
               </div>
               <div v-else />
             </div>
           </div>
 
-          <div class="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <article
-              class="rounded-[1.4rem] border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.66)] p-4 backdrop-blur"
-            >
-              <p
-                class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"
-              >
-                {{ t('index.metricSpaces') }}
-              </p>
-              <p class="mt-3 text-3xl font-semibold text-slate-800">
-                {{ spaces.length }}
-              </p>
-            </article>
+          <div class="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
             <article
               class="rounded-[1.4rem] border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.66)] p-4 backdrop-blur"
             >
@@ -1039,6 +1036,16 @@ async function saveProfile() {
                 color="neutral"
                 variant="ghost"
                 class="h-10 w-10 justify-center p-0"
+                :title="t('index.createSpace')"
+                :aria-label="t('index.createSpace')"
+                @click="openCreateSpaceModal"
+              >
+                <WorkspaceIcon name="plus-folder" class="h-4 w-4" />
+              </UButton>
+              <UButton
+                color="neutral"
+                variant="ghost"
+                class="h-10 w-10 justify-center p-0"
                 :title="t('index.logout')"
                 :aria-label="t('index.logout')"
                 :loading="logoutPending"
@@ -1051,64 +1058,39 @@ async function saveProfile() {
 
           <div class="mt-5 space-y-4">
             <div
-              class="rounded-2xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,250,243,0.88)] p-4 text-sm leading-6 text-slate-600"
-            >
-              <p v-if="currentUser">
-                {{ t('index.loggedInHint') }}
-              </p>
-              <p v-else>
-                {{ t('index.guestHint') }}
-              </p>
-            </div>
-
-            <form
               v-if="currentUser"
-              class="space-y-3"
-              @submit.prevent="createSpace"
+              class="fd-home-guide rounded-2xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,250,243,0.88)] p-4"
             >
-              <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem]">
-                <UInput
-                  v-model="createForm.name"
-                  size="xl"
-                  :placeholder="t('index.newSpaceName')"
-                />
-                <AppSelectMenu
-                  v-model="createForm.visibility"
-                  :options="visibilityOptions"
-                  :aria-label="t('workspace.visibility')"
-                />
-              </div>
-
-              <div
-                class="rounded-2xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.62)] px-4 py-3"
-              >
-                <p class="text-sm leading-6 text-slate-600">
-                  {{ t('index.personalWorkspaceHint') }}
-                </p>
-              </div>
-
-              <p class="text-sm leading-6 text-slate-500">
-                {{ t('index.spaceNameRule') }}
+              <p class="text-sm font-semibold text-slate-700">
+                {{ t('index.quickGuideTitle') }}
               </p>
-              <p v-if="createError" class="text-sm text-rose-600">
-                {{ createError }}
+              <p class="mt-2 text-sm leading-6 text-slate-500">
+                {{ t('index.quickGuideSummaryUser') }}
               </p>
 
-              <div class="flex items-center justify-between gap-3">
-                <p class="text-xs uppercase tracking-[0.18em] text-slate-400">
-                  {{ t('index.quickCreate') }}
-                </p>
-                <UButton
-                  type="submit"
-                  size="xl"
-                  color="neutral"
-                  :loading="createPending"
-                  :disabled="!isCreateFormValid"
+              <ol class="mt-4 space-y-2 text-sm text-slate-600">
+                <li
+                  class="fd-home-guide-item rounded-xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.72)] px-3 py-2"
                 >
-                  {{ t('index.createSpace') }}
-                </UButton>
-              </div>
-            </form>
+                  1. {{ t('index.quickGuideStepCreateSpace') }}
+                </li>
+                <li
+                  class="fd-home-guide-item rounded-xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.72)] px-3 py-2"
+                >
+                  2. {{ t('index.quickGuideStepCreateDoc') }}
+                </li>
+                <li
+                  class="fd-home-guide-item rounded-xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.72)] px-3 py-2"
+                >
+                  3. {{ t('index.quickGuideStepEdit') }}
+                </li>
+                <li
+                  class="fd-home-guide-item rounded-xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.72)] px-3 py-2"
+                >
+                  4. {{ t('index.quickGuideStepShare') }}
+                </li>
+              </ol>
+            </div>
 
             <div
               v-else
@@ -1246,6 +1228,69 @@ async function saveProfile() {
         </p>
       </article>
     </section>
+
+    <div
+      v-if="isCreateSpaceModalOpen"
+      class="fd-space-delete-modal-wrap"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="t('index.createSpace')"
+    >
+      <button
+        type="button"
+        class="fd-space-delete-modal-backdrop"
+        :aria-label="t('common.cancel')"
+        @click="isCreateSpaceModalOpen = false"
+      />
+      <div class="fd-space-delete-modal">
+        <p
+          class="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700"
+        >
+          {{ t('index.createSpace') }}
+        </p>
+        <h3 class="mt-2 text-xl font-semibold text-slate-800">
+          {{ t('index.newSpaceName') }}
+        </h3>
+        <form class="mt-4 space-y-3" @submit.prevent="createSpace">
+          <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem]">
+            <UInput
+              v-model="createForm.name"
+              size="xl"
+              :placeholder="t('index.newSpaceName')"
+            />
+            <AppSelectMenu
+              v-model="createForm.visibility"
+              :options="visibilityOptions"
+              :aria-label="t('workspace.visibility')"
+            />
+          </div>
+          <p class="text-sm leading-6 text-slate-500">
+            {{ t('index.spaceNameRule') }}
+          </p>
+          <p v-if="createError" class="text-sm text-rose-600">
+            {{ createError }}
+          </p>
+          <div class="mt-2 flex items-center justify-end gap-2">
+            <UButton
+              color="neutral"
+              variant="ghost"
+              :disabled="createPending"
+              @click="isCreateSpaceModalOpen = false"
+            >
+              {{ t('common.cancel') }}
+            </UButton>
+            <UButton
+              type="submit"
+              color="neutral"
+              :loading="createPending"
+              :disabled="!isCreateFormValid"
+            >
+              {{ t('index.createSpace') }}
+            </UButton>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <div
       v-if="showIosInstallHint"

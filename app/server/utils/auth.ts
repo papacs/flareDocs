@@ -1,10 +1,5 @@
 import { SignJWT, jwtVerify, errors } from 'jose'
-import {
-  deleteCookie,
-  getCookie,
-  getRequestURL,
-  type H3Event
-} from 'h3'
+import { deleteCookie, getCookie, getRequestURL, type H3Event } from 'h3'
 import { eq } from 'drizzle-orm'
 import { useRuntimeConfig } from '#imports'
 
@@ -45,7 +40,10 @@ function shouldUseSecureCookies(event: H3Event) {
   return requestUrl.protocol === 'https:'
 }
 
-export async function issueAuthToken(event: H3Event, payload: AuthTokenPayload) {
+export async function issueAuthToken(
+  event: H3Event,
+  payload: AuthTokenPayload
+) {
   return await new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
     .setIssuedAt()
@@ -54,9 +52,13 @@ export async function issueAuthToken(event: H3Event, payload: AuthTokenPayload) 
 }
 
 export async function verifyAuthToken(event: H3Event, token: string) {
-  const { payload } = await jwtVerify<AuthTokenPayload>(token, getAuthSecret(event), {
-    algorithms: ['HS256']
-  })
+  const { payload } = await jwtVerify<AuthTokenPayload>(
+    token,
+    getAuthSecret(event),
+    {
+      algorithms: ['HS256']
+    }
+  )
 
   return payload
 }
@@ -71,7 +73,10 @@ export async function getSessionFromRequest(event: H3Event) {
   try {
     const payload = await verifyAuthToken(event, token)
 
-    if (typeof payload.userId !== 'number' || typeof payload.username !== 'string') {
+    if (
+      typeof payload.userId !== 'number' ||
+      typeof payload.username !== 'string'
+    ) {
       return null
     }
 
@@ -80,7 +85,10 @@ export async function getSessionFromRequest(event: H3Event) {
       username: payload.username
     }
   } catch (error) {
-    if (error instanceof errors.JWTExpired || error instanceof errors.JWTInvalid) {
+    if (
+      error instanceof errors.JWTExpired ||
+      error instanceof errors.JWTInvalid
+    ) {
       return null
     }
 
@@ -116,25 +124,30 @@ export async function getAuthenticatedUser(event: H3Event) {
   return user
 }
 
-export function isSystemAdminUser(user: { isSystemAdmin?: boolean } | null | undefined) {
+export function isSystemAdminUser(
+  user: { isSystemAdmin?: boolean } | null | undefined
+) {
   return Boolean(user?.isSystemAdmin)
 }
 
 export function clearAuthCookie(event: H3Event) {
   deleteCookie(event, AUTH_COOKIE_NAME, {
     httpOnly: true,
-    sameSite: 'strict',
+    sameSite: 'lax',
     secure: shouldUseSecureCookies(event),
     path: '/'
   })
 }
 
 export function getAuthCookieOptions(event: H3Event) {
+  const expiresAt = new Date(Date.now() + AUTH_COOKIE_MAX_AGE * 1000)
+
   return {
     httpOnly: true,
-    sameSite: 'strict' as const,
+    sameSite: 'lax' as const,
     secure: shouldUseSecureCookies(event),
     path: '/',
-    maxAge: AUTH_COOKIE_MAX_AGE
+    maxAge: AUTH_COOKIE_MAX_AGE,
+    expires: expiresAt
   }
 }

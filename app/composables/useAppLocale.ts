@@ -51,9 +51,9 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'login.submitRegister': '创建账号',
     'login.back': '返回空间列表',
     'login.loggedInAs': ({ username }) => `你已登录为 ${username}。`,
-    'index.title': '一个移动端优先、已接通真实接口的小团队知识库。',
+    'index.title': '把团队知识整理成一棵清晰可用的文档树。',
     'index.summary':
-      '认证、空间、成员、文档树 API 和乐观锁都已经接通，账号由系统管理员统一创建。',
+      '先建空间，再建目录和文档；支持移动端编辑、表格公式、语音追加与权限协作。',
     'index.openWorkspace': '打开工作区',
     'index.loginOrRegister': '登录或注册',
     'index.loginOnly': '登录',
@@ -108,6 +108,21 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'index.guestPanelFeatureManage': '登录后可创建团队空间并管理成员权限。',
     'index.guestPanelFeaturePrivate': '每个账号都会自动获得一个个人工作区。',
     'index.guestPanelOpenPublic': '查看公开空间',
+    'index.spaceTypeGuideTitle': '空间类型怎么选',
+    'index.spaceTypeGuideSummary': '按可见范围选类型，后续也可再调整。',
+    'index.spaceTypeGuidePrivate': '仅你和被授权成员可见，适合个人笔记和草稿。',
+    'index.spaceTypeGuideTeam': '团队成员可见，适合项目协作和内部沉淀。',
+    'index.spaceTypeGuidePublic': '所有人可读，适合公告、手册和对外知识。',
+    'index.spaceTypeGuideTip':
+      '不确定时先选“私有”，整理好后再切为“团队/公开”。',
+    'index.quickGuideTitle': '快速入门',
+    'index.quickGuideSummaryUser': '3 分钟完成从创建到协作，按下面 4 步走。',
+    'index.quickGuideStepCreateSpace':
+      '点击右上角“创建空间”，先建一个私有空间。',
+    'index.quickGuideStepCreateDoc': '进入空间后在左侧目录创建目录或文档。',
+    'index.quickGuideStepEdit':
+      '打开编辑模式直接输入，支持表格、公式和语音追加。',
+    'index.quickGuideStepShare': '需要协作时把空间改为团队并添加成员。',
     'index.spaceNameRule': '空间名称需要 2 到 64 个字符。',
     'index.invalidSpaceName': '请输入 2 到 64 个字符的空间名称。',
     'index.createSpaceFailed': '创建空间失败，请稍后重试。',
@@ -319,10 +334,9 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'login.back': 'Back To Spaces',
     'login.loggedInAs': ({ username }) =>
       `You are already logged in as ${username}.`,
-    'index.title':
-      'A mobile-first team knowledge base that is already backed by real APIs.',
+    'index.title': 'Turn team knowledge into a clean, navigable document tree.',
     'index.summary':
-      'Authentication, spaces, memberships, document tree APIs, and optimistic locking are already in place, and accounts are now created by system admins only.',
+      'Create a space, then folders and docs. Mobile editing, tables/formulas, voice append, and role-based collaboration are ready.',
     'index.openWorkspace': 'Open Workspace',
     'index.loginOrRegister': 'Login Or Register',
     'index.loginOnly': 'Login',
@@ -383,6 +397,28 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'index.guestPanelFeaturePrivate':
       'Each account gets a personal workspace automatically.',
     'index.guestPanelOpenPublic': 'Browse Public Spaces',
+    'index.spaceTypeGuideTitle': 'How To Choose Space Type',
+    'index.spaceTypeGuideSummary':
+      'Pick by visibility scope first. You can adjust later.',
+    'index.spaceTypeGuidePrivate':
+      'Visible to you and authorized members only. Best for drafts and personal notes.',
+    'index.spaceTypeGuideTeam':
+      'Visible to team members. Best for project collaboration and internal docs.',
+    'index.spaceTypeGuidePublic':
+      'Readable by everyone. Best for announcements, manuals, and shared knowledge.',
+    'index.spaceTypeGuideTip':
+      'If unsure, start with Private and switch to Team/Public after content is ready.',
+    'index.quickGuideTitle': 'Quick Start',
+    'index.quickGuideSummaryUser':
+      'Finish from setup to collaboration in about 3 minutes with these 4 steps.',
+    'index.quickGuideStepCreateSpace':
+      'Use the top-right create button to start with a private workspace.',
+    'index.quickGuideStepCreateDoc':
+      'Open the workspace and create folders or docs in the left tree.',
+    'index.quickGuideStepEdit':
+      'Edit directly with Markdown visuals, tables, formulas, and voice append.',
+    'index.quickGuideStepShare':
+      'Switch to team visibility and add members when you need collaboration.',
     'index.spaceNameRule': 'Space names must be between 2 and 64 characters.',
     'index.invalidSpaceName': 'Enter a space name between 2 and 64 characters.',
     'index.createSpaceFailed': 'Unable to create the space right now.',
