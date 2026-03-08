@@ -251,37 +251,77 @@ function appendSpeechTextToMarkdown(content: string, text: string) {
   }
 
   const lines = content.split('\n')
+  const hasFrontmatter = lines[0]?.trim() === '---'
+  let frontmatterEndIndex = -1
+
+  if (hasFrontmatter) {
+    for (let index = 1; index < lines.length; index += 1) {
+      if (lines[index].trim() === '---') {
+        frontmatterEndIndex = index
+        break
+      }
+    }
+  }
+
+  const frontmatterLines =
+    frontmatterEndIndex > 0 ? lines.slice(0, frontmatterEndIndex + 1) : []
+  const bodyLines =
+    frontmatterEndIndex > 0 ? lines.slice(frontmatterEndIndex + 1) : lines
+
   const dateHeading = `## ${formatTodayDateLabel()}`
-  const dateHeadingIndex = lines.findIndex(
+  const dateHeadingIndex = bodyLines.findIndex(
     (line) => line.trim() === dateHeading
   )
   const listLine = `- ${normalizedText}`
 
-  if (dateHeadingIndex < 0) {
-    const base = content.trimEnd()
-    return `${base ? `${base}\n\n` : ''}${dateHeading}\n\n${listLine}\n`
-  }
+  let todaySectionLines: string[] = []
+  let remainingLines = [...bodyLines]
 
-  let nextHeadingIndex = lines.length
+  if (dateHeadingIndex >= 0) {
+    let sectionEndIndex = bodyLines.length
 
-  for (let index = dateHeadingIndex + 1; index < lines.length; index += 1) {
-    if (/^##\s+/.test(lines[index].trim())) {
-      nextHeadingIndex = index
-      break
+    for (
+      let index = dateHeadingIndex + 1;
+      index < bodyLines.length;
+      index += 1
+    ) {
+      if (/^##\s+/.test(bodyLines[index].trim())) {
+        sectionEndIndex = index
+        break
+      }
     }
+
+    todaySectionLines = bodyLines.slice(dateHeadingIndex, sectionEndIndex)
+    remainingLines = [
+      ...bodyLines.slice(0, dateHeadingIndex),
+      ...bodyLines.slice(sectionEndIndex)
+    ]
   }
 
-  const before = lines.slice(0, nextHeadingIndex)
-  const after = lines.slice(nextHeadingIndex)
-
-  while (before.length && !before[before.length - 1].trim()) {
-    before.pop()
+  if (!todaySectionLines.length) {
+    todaySectionLines = [dateHeading, '', listLine]
+  } else {
+    while (
+      todaySectionLines.length &&
+      !todaySectionLines[todaySectionLines.length - 1].trim()
+    ) {
+      todaySectionLines.pop()
+    }
+    todaySectionLines.push('', listLine)
   }
 
-  before.push('')
-  before.push(listLine)
+  while (remainingLines.length && !remainingLines[0].trim()) {
+    remainingLines.shift()
+  }
 
-  return [...before, ...after].join('\n')
+  const outputLines = [
+    ...frontmatterLines,
+    ...(frontmatterLines.length ? [''] : []),
+    ...todaySectionLines,
+    ...(remainingLines.length ? ['', ...remainingLines] : [])
+  ]
+
+  return `${outputLines.join('\n').trimEnd()}\n`
 }
 
 function mapSpeechErrorMessage(errorCode?: string) {
@@ -2357,7 +2397,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
                 <button
                   v-if="speechSupported && speechListening"
                   type="button"
-                  class="fd-icon-button fd-icon-button-danger"
+                  class="fd-icon-button fd-icon-button-danger fd-voice-live"
                   :title="t('workspace.voiceStop')"
                   :aria-label="t('workspace.voiceStop')"
                   @click="stopSpeechRecognition"
@@ -2374,17 +2414,6 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
                   @click="appendSpeechToDraft"
                 >
                   <WorkspaceIcon name="plus-file" class="h-4 w-4" />
-                </button>
-                <button
-                  v-if="speechSupported"
-                  type="button"
-                  class="fd-icon-button"
-                  :title="t('common.cancel')"
-                  :aria-label="t('common.cancel')"
-                  :disabled="!speechPreviewText"
-                  @click="clearSpeechDraft"
-                >
-                  <WorkspaceIcon name="close" class="h-4 w-4" />
                 </button>
                 <span
                   class="rounded-full border px-2 py-0.5 text-[11px] font-medium text-slate-600"
