@@ -7,6 +7,8 @@ export type AuditAction =
   | 'LOGIN'
   | 'LOGOUT'
   | 'CREATE_SPACE'
+  | 'UPDATE_SPACE'
+  | 'DELETE_SPACE'
   | 'ADD_MEMBER'
   | 'UPDATE_MEMBER_ROLE'
   | 'REMOVE_MEMBER'
@@ -39,12 +41,14 @@ type CloudflareEventContext = H3Event['context'] & {
 }
 
 function getRequestIp(event: H3Event) {
-  const forwardedIp = getHeader(event, 'cf-connecting-ip') ?? getHeader(event, 'x-forwarded-for')
+  const forwardedIp =
+    getHeader(event, 'cf-connecting-ip') ?? getHeader(event, 'x-forwarded-for')
   return forwardedIp?.split(',')[0]?.trim() ?? null
 }
 
 function getWaitUntil(event: H3Event) {
-  const executionContext = (event.context as CloudflareEventContext).cloudflare?.context
+  const executionContext = (event.context as CloudflareEventContext).cloudflare
+    ?.context
 
   if (!executionContext?.waitUntil) {
     return null

@@ -110,6 +110,10 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'index.deleteSpaceModalCascade':
       '该工作区下的目录、文档和已上传文件将一并删除，请谨慎操作。',
     'index.deleteSpaceFailed': '删除工作区失败，请稍后重试。',
+    'index.more': '更多',
+    'index.renameSpace': '修改名称',
+    'index.renameSpaceModalTitle': ({ name }) => `修改「${name}」的名称`,
+    'index.renameSpaceFailed': '修改工作区名称失败，请稍后重试。',
     'index.createSpace': '创建空间',
     'index.slug': ({ slug }) => `Slug：${slug}`,
     'index.role': '角色',
@@ -348,6 +352,10 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'index.deleteSpaceModalCascade':
       'All folders, documents, and uploaded files in this workspace will be deleted together.',
     'index.deleteSpaceFailed': 'Unable to delete the workspace right now.',
+    'index.more': 'More',
+    'index.renameSpace': 'Rename',
+    'index.renameSpaceModalTitle': ({ name }) => `Rename "${name}"`,
+    'index.renameSpaceFailed': 'Unable to rename the workspace right now.',
     'index.createSpace': 'Create Space',
     'index.slug': ({ slug }) => `Slug: ${slug}`,
     'index.role': 'Role',

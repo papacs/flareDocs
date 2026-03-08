@@ -18,6 +18,7 @@ defineProps<{
     | 'home'
     | 'info'
     | 'markdown'
+    | 'more'
     | 'move'
     | 'pdf'
     | 'plus-file'
@@ -329,6 +330,21 @@ defineProps<{
     <path d="M7.5 15V9l2.2 2.8L12 9v6" />
     <path d="M15 9v4" />
     <path d="m15 13 2 2 2-2" />
+  </svg>
+
+  <svg
+    v-else-if="name === 'more'"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <circle cx="12" cy="5.5" r="1.1" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="18.5" r="1.1" fill="currentColor" stroke="none" />
   </svg>
 
   <svg

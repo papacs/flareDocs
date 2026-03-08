@@ -100,6 +100,10 @@ const logoutPending = ref(false)
 const deleteSpacePendingId = ref<number | null>(null)
 const deleteSpaceTargetId = ref<number | null>(null)
 const deleteSpaceError = ref('')
+const spaceActionMenuId = ref<number | null>(null)
+const renameSpaceTargetId = ref<number | null>(null)
+const renameSpacePendingId = ref<number | null>(null)
+const renameSpaceError = ref('')
 const settingsOpen = ref(false)
 const profilePending = ref(false)
 const profileError = ref('')
@@ -127,6 +131,14 @@ const profileForm = reactive<{
   newPassword: ''
 })
 
+const renameSpaceTarget = computed(
+  () =>
+    spaces.value.find((space) => space.id === renameSpaceTargetId.value) ?? null
+)
+const renameForm = reactive({
+  name: ''
+})
+
 watch(
   currentUser,
   (user) => {
@@ -149,6 +161,15 @@ function readRecentSpaceId() {
 
 onMounted(() => {
   readRecentSpaceId()
+  if (import.meta.client) {
+    window.addEventListener('pointerdown', handleWindowPointerdown)
+  }
+})
+
+onBeforeUnmount(() => {
+  if (import.meta.client) {
+    window.removeEventListener('pointerdown', handleWindowPointerdown)
+  }
 })
 
 function selectAppearance(nextAppearance: AppearanceMode) {
@@ -194,7 +215,24 @@ function canDeleteSpace(space: SpaceSummary) {
   return space.myRole === 'admin' || space.createdBy === currentUser.value.id
 }
 
+function canRenameSpace(space: SpaceSummary) {
+  return canDeleteSpace(space)
+}
+
+function toggleSpaceActionMenu(spaceId: number) {
+  spaceActionMenuId.value = spaceActionMenuId.value === spaceId ? null : spaceId
+}
+
+function closeSpaceActionMenu() {
+  spaceActionMenuId.value = null
+}
+
+function handleWindowPointerdown() {
+  closeSpaceActionMenu()
+}
+
 function beginDeleteSpace(spaceId: number) {
+  closeSpaceActionMenu()
   deleteSpaceError.value = ''
   deleteSpaceTargetId.value = spaceId
 }
@@ -247,6 +285,66 @@ async function confirmDeleteSpace(space: SpaceSummary) {
     }
   } finally {
     deleteSpacePendingId.value = null
+  }
+}
+
+function beginRenameSpace(space: SpaceSummary) {
+  closeSpaceActionMenu()
+  renameSpaceError.value = ''
+  renameSpaceTargetId.value = space.id
+  renameForm.name = space.name
+}
+
+function cancelRenameSpace() {
+  renameSpaceTargetId.value = null
+  renameSpaceError.value = ''
+}
+
+async function confirmRenameSpace(space: SpaceSummary) {
+  const nextName = renameForm.name.trim()
+
+  if (nextName.length < 2 || nextName.length > 64) {
+    renameSpaceError.value = t('index.invalidSpaceName')
+    return
+  }
+
+  if (nextName === space.name) {
+    renameSpaceTargetId.value = null
+    renameSpaceError.value = ''
+    return
+  }
+
+  renameSpacePendingId.value = space.id
+  renameSpaceError.value = ''
+
+  try {
+    const response = await $fetch<ApiResponse<{ space: SpaceSummary }>>(
+      `/api/spaces/${space.id}`,
+      {
+        method: 'PATCH',
+        body: {
+          name: nextName
+        }
+      }
+    )
+
+    if (!response.ok) {
+      renameSpaceError.value = response.error.message
+      return
+    }
+
+    await refreshSpaces()
+    renameSpaceTargetId.value = null
+  } catch (error: unknown) {
+    if (error instanceof FetchError) {
+      const errorMessage = readApiErrorMessage(error.data)
+      renameSpaceError.value = errorMessage ?? t('index.renameSpaceFailed')
+    } else {
+      renameSpaceError.value =
+        error instanceof Error ? error.message : t('index.renameSpaceFailed')
+    }
+  } finally {
+    renameSpacePendingId.value = null
   }
 }
 
@@ -936,7 +1034,7 @@ async function saveProfile() {
       <article
         v-for="space in spaces"
         :key="space.id"
-        class="group rounded-[1.8rem] border border-[rgba(31,41,55,0.1)] bg-[linear-gradient(180deg,rgba(255,252,247,0.94),rgba(248,243,235,0.84))] p-5 shadow-[0_18px_40px_rgba(120,98,69,0.1)] transition hover:-translate-y-0.5 hover:shadow-[0_22px_46px_rgba(120,98,69,0.14)]"
+        class="group relative rounded-[1.8rem] border border-[rgba(31,41,55,0.1)] bg-[linear-gradient(180deg,rgba(255,252,247,0.94),rgba(248,243,235,0.84))] p-5 shadow-[0_18px_40px_rgba(120,98,69,0.1)] transition hover:-translate-y-0.5 hover:shadow-[0_22px_46px_rgba(120,98,69,0.14)]"
       >
         <div class="flex items-start justify-between gap-3">
           <div>
@@ -958,16 +1056,44 @@ async function saveProfile() {
             >
               <WorkspaceIcon name="chevron" class="h-4 w-4" />
             </NuxtLink>
-            <button
-              v-if="canDeleteSpace(space)"
-              type="button"
-              class="fd-space-card-icon-action fd-space-card-icon-action-danger"
-              :title="`${t('index.deleteSpace')}（双击）`"
-              :aria-label="`${t('index.deleteSpace')}（双击）`"
-              @dblclick="beginDeleteSpace(space.id)"
-            >
-              <WorkspaceIcon name="delete" class="h-4 w-4" />
-            </button>
+            <div v-if="canRenameSpace(space)" class="relative">
+              <button
+                type="button"
+                class="fd-space-card-icon-action"
+                :title="t('index.more')"
+                :aria-label="t('index.more')"
+                @pointerdown.stop
+                @click.stop="toggleSpaceActionMenu(space.id)"
+              >
+                <WorkspaceIcon name="more" class="h-4 w-4" />
+              </button>
+              <div
+                v-if="spaceActionMenuId === space.id"
+                class="fd-space-action-menu"
+                role="menu"
+                @pointerdown.stop
+                @click.stop
+              >
+                <button
+                  type="button"
+                  class="fd-space-action-menu-item"
+                  :title="t('index.renameSpace')"
+                  :aria-label="t('index.renameSpace')"
+                  @click="beginRenameSpace(space)"
+                >
+                  <WorkspaceIcon name="edit" class="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  class="fd-space-action-menu-item fd-space-action-menu-item-danger"
+                  :title="t('index.deleteSpace')"
+                  :aria-label="t('index.deleteSpace')"
+                  @click="beginDeleteSpace(space.id)"
+                >
+                  <WorkspaceIcon name="delete" class="h-4 w-4" />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </article>
@@ -984,6 +1110,56 @@ async function saveProfile() {
         </p>
       </article>
     </section>
+
+    <div
+      v-if="renameSpaceTarget"
+      class="fd-space-delete-modal-wrap"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="t('index.renameSpace')"
+    >
+      <button
+        type="button"
+        class="fd-space-delete-modal-backdrop"
+        :aria-label="t('common.cancel')"
+        @click="cancelRenameSpace"
+      />
+      <div class="fd-space-delete-modal">
+        <p
+          class="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700"
+        >
+          {{ t('index.renameSpace') }}
+        </p>
+        <h3 class="mt-2 text-xl font-semibold text-slate-800">
+          {{
+            t('index.renameSpaceModalTitle', { name: renameSpaceTarget.name })
+          }}
+        </h3>
+        <p class="mt-3 text-sm leading-6 text-slate-600">
+          {{ t('index.spaceNameRule') }}
+        </p>
+        <UInput
+          v-model="renameForm.name"
+          class="mt-4"
+          :placeholder="t('index.newSpaceName')"
+        />
+        <p v-if="renameSpaceError" class="mt-3 text-sm text-rose-600">
+          {{ renameSpaceError }}
+        </p>
+        <div class="mt-5 flex items-center justify-end gap-2">
+          <UButton color="neutral" variant="ghost" @click="cancelRenameSpace">
+            {{ t('common.cancel') }}
+          </UButton>
+          <UButton
+            color="neutral"
+            :loading="renameSpacePendingId === renameSpaceTargetId"
+            @click="confirmRenameSpace(renameSpaceTarget)"
+          >
+            {{ t('common.save') }}
+          </UButton>
+        </div>
+      </div>
+    </div>
 
     <div
       v-if="deleteSpaceTarget"

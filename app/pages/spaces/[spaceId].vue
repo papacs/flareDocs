@@ -47,6 +47,7 @@ const isMovePanelOpen = ref(false)
 const isExportMenuOpen = ref(false)
 const isActionMenuOpen = ref(false)
 const isDocumentInfoOpen = ref(false)
+const isDeleteConfirmOpen = ref(false)
 const isFullscreen = ref(false)
 const isMobileTreeOpen = ref(false)
 const conflictMessage = ref('')
@@ -654,6 +655,7 @@ watch(selectedDocument, (document) => {
   isExportMenuOpen.value = false
   isActionMenuOpen.value = false
   isDocumentInfoOpen.value = false
+  isDeleteConfirmOpen.value = false
   moveTargetParentId.value = document?.parentId
     ? String(document.parentId)
     : 'root'
@@ -1195,10 +1197,11 @@ async function deleteDocument() {
     return
   }
 
-  if (import.meta.client && !window.confirm(t('workspace.confirmDelete'))) {
+  if (deletePending.value) {
     return
   }
 
+  isDeleteConfirmOpen.value = false
   deletePending.value = true
   isActionMenuOpen.value = false
 
@@ -1214,9 +1217,21 @@ async function deleteDocument() {
     documentCache.clear()
     selectedDocumentId.value = null
     await refreshTree()
+  } catch (error: unknown) {
+    workspaceError.value =
+      error instanceof Error ? error.message : 'Unable to delete item.'
   } finally {
     deletePending.value = false
   }
+}
+
+function requestDeleteDocument() {
+  if (!selectedDocument.value || deletePending.value) {
+    return
+  }
+
+  isActionMenuOpen.value = false
+  isDeleteConfirmOpen.value = true
 }
 
 async function moveDocument() {
@@ -1763,7 +1778,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
               :disabled="deletePending"
               :title="t('common.delete')"
               :aria-label="t('common.delete')"
-              @click="deleteDocument"
+              @click="requestDeleteDocument"
             >
               <WorkspaceIcon name="delete" class="h-4 w-4" />
             </button>
@@ -1899,12 +1914,57 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
 
         <div
           v-if="selectedDocument.isFolder"
-          class="fd-document-stage fd-folder-stage mt-3 rounded-xl bg-[rgba(244,238,229,0.7)] p-4 text-slate-600"
+          class="fd-document-stage fd-folder-stage fd-folder-stage-surface mt-3 rounded-xl p-4"
         >
           <p>{{ t('workspace.folderHint') }}</p>
-          <p class="mt-2 text-sm leading-6 text-slate-500">
+          <p class="fd-folder-stage-subtext mt-2 text-sm leading-6">
             {{ t('workspace.folderMoveHint') }}
           </p>
+        </div>
+
+        <div
+          v-if="isDeleteConfirmOpen && selectedDocument"
+          class="fd-space-delete-modal-wrap"
+          role="dialog"
+          aria-modal="true"
+          :aria-label="t('common.delete')"
+        >
+          <button
+            type="button"
+            class="fd-space-delete-modal-backdrop"
+            :aria-label="t('common.cancel')"
+            @click="isDeleteConfirmOpen = false"
+          />
+          <div class="fd-space-delete-modal">
+            <p
+              class="text-xs font-semibold uppercase tracking-[0.2em] text-rose-600"
+            >
+              {{ t('common.delete') }}
+            </p>
+            <h3 class="mt-2 text-xl font-semibold text-slate-800">
+              {{ selectedDocument.title }}
+            </h3>
+            <p class="mt-3 text-sm leading-6 text-slate-600">
+              {{ t('workspace.confirmDelete') }}
+            </p>
+            <div class="mt-5 flex items-center justify-end gap-2">
+              <UButton
+                color="neutral"
+                variant="ghost"
+                :disabled="deletePending"
+                @click="isDeleteConfirmOpen = false"
+              >
+                {{ t('common.cancel') }}
+              </UButton>
+              <UButton
+                color="neutral"
+                :loading="deletePending"
+                @click="deleteDocument"
+              >
+                {{ t('common.delete') }}
+              </UButton>
+            </div>
+          </div>
         </div>
 
         <div v-else class="fd-document-stage mt-3 flex min-h-0 flex-1 flex-col">
@@ -2037,12 +2097,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
 
       <div class="fd-tree-heading">
         <div>
-          <p class="text-xs uppercase tracking-[0.24em] text-slate-500">
-            {{ t('workspace.tree') }}
-          </p>
-          <h2 class="mt-2 text-lg font-semibold text-slate-800">
-            {{ t('workspace.documents') }}
-          </h2>
+          <p class="text-xs text-slate-500">文档目录</p>
         </div>
         <div class="flex items-center gap-1.5">
           <button

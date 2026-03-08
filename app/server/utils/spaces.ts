@@ -1,6 +1,11 @@
 import { and, eq } from 'drizzle-orm'
 
-import { spaceMembers, spaces, type SpaceRole, type SpaceVisibility } from '../../../db/schema'
+import {
+  spaceMembers,
+  spaces,
+  type SpaceRole,
+  type SpaceVisibility
+} from '../../../db/schema'
 
 type DatabaseLike = ReturnType<typeof import('./db').getDb>
 
@@ -32,7 +37,22 @@ export function buildPersonalWorkspaceSlug(username: string) {
   return `personal-${username.trim().toLowerCase()}`
 }
 
-export function isPersonalWorkspace(space: { createdBy: number | null; slug: string; visibility: SpaceVisibility }, user?: AuthenticatedUser | null) {
+function buildLegacyPersonalWorkspaceName(username: string) {
+  return `${username} 的个人工作区`
+}
+
+function buildPersonalWorkspaceName(username: string) {
+  return `${username} 的个人`
+}
+
+export function isPersonalWorkspace(
+  space: {
+    createdBy: number | null
+    slug: string
+    visibility: SpaceVisibility
+  },
+  user?: AuthenticatedUser | null
+) {
   if (!user) {
     return false
   }
@@ -44,8 +64,13 @@ export function isPersonalWorkspace(space: { createdBy: number | null; slug: str
   )
 }
 
-export async function ensurePersonalWorkspace(db: DatabaseLike, user: AuthenticatedUser) {
+export async function ensurePersonalWorkspace(
+  db: DatabaseLike,
+  user: AuthenticatedUser
+) {
   const slug = buildPersonalWorkspaceSlug(user.username)
+  const nextPersonalName = buildPersonalWorkspaceName(user.username)
+  const legacyPersonalName = buildLegacyPersonalWorkspaceName(user.username)
   const [existingSpace] = await db
     .select({
       id: spaces.id,
@@ -60,12 +85,28 @@ export async function ensurePersonalWorkspace(db: DatabaseLike, user: Authentica
     .limit(1)
 
   if (existingSpace) {
+    if (existingSpace.name === legacyPersonalName) {
+      await db
+        .update(spaces)
+        .set({
+          name: nextPersonalName
+        })
+        .where(eq(spaces.id, existingSpace.id))
+
+      existingSpace.name = nextPersonalName
+    }
+
     const [membership] = await db
       .select({
         role: spaceMembers.roleInSpace
       })
       .from(spaceMembers)
-      .where(and(eq(spaceMembers.spaceId, existingSpace.id), eq(spaceMembers.userId, user.id)))
+      .where(
+        and(
+          eq(spaceMembers.spaceId, existingSpace.id),
+          eq(spaceMembers.userId, user.id)
+        )
+      )
       .limit(1)
 
     if (!membership) {
@@ -82,7 +123,7 @@ export async function ensurePersonalWorkspace(db: DatabaseLike, user: Authentica
   const [createdSpace] = await db
     .insert(spaces)
     .values({
-      name: `${user.username} 的个人工作区`,
+      name: nextPersonalName,
       slug,
       visibility: 'private',
       createdBy: user.id
@@ -97,7 +138,11 @@ export async function ensurePersonalWorkspace(db: DatabaseLike, user: Authentica
     })
 
   if (!createdSpace) {
-    throw new SpaceAccessError(500, 'PERSONAL_SPACE_CREATE_FAILED', 'Unable to create personal workspace.')
+    throw new SpaceAccessError(
+      500,
+      'PERSONAL_SPACE_CREATE_FAILED',
+      'Unable to create personal workspace.'
+    )
   }
 
   await db.insert(spaceMembers).values({
@@ -143,7 +188,9 @@ export async function getSpaceContext(
       role: spaceMembers.roleInSpace
     })
     .from(spaceMembers)
-    .where(and(eq(spaceMembers.spaceId, spaceId), eq(spaceMembers.userId, userId)))
+    .where(
+      and(eq(spaceMembers.spaceId, spaceId), eq(spaceMembers.userId, userId))
+    )
     .limit(1)
 
   return {
@@ -168,11 +215,19 @@ export async function assertSpaceRole(
   }
 
   if (!user) {
-    throw new SpaceAccessError(401, 'UNAUTHORIZED', 'Authentication is required for this space.')
+    throw new SpaceAccessError(
+      401,
+      'UNAUTHORIZED',
+      'Authentication is required for this space.'
+    )
   }
 
   if (!role) {
-    throw new SpaceAccessError(403, 'SPACE_ACCESS_DENIED', 'You do not have access to this space.')
+    throw new SpaceAccessError(
+      403,
+      'SPACE_ACCESS_DENIED',
+      'You do not have access to this space.'
+    )
   }
 
   if (roleRank[role] < roleRank[requiredRole]) {
