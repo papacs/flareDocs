@@ -586,6 +586,131 @@ async function saveProfile() {
       </aside>
     </div>
 
+    <div
+      v-if="currentUser && settingsOpen"
+      class="fd-desktop-settings-overlay fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/35 p-6 sm:flex"
+      @click="settingsOpen = false"
+    >
+      <div
+        class="fd-desktop-settings-modal w-full max-w-3xl overflow-y-auto rounded-[1.6rem] border border-[rgba(31,41,55,0.12)] bg-[linear-gradient(180deg,rgba(255,252,247,0.98),rgba(245,239,229,0.96))] p-5 shadow-[0_24px_56px_rgba(15,23,42,0.22)] sm:max-h-[85vh] sm:p-6"
+        @click.stop
+      >
+        <div class="flex items-center justify-between gap-3">
+          <p
+            class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500"
+          >
+            {{ t('index.profileSettings') }}
+          </p>
+          <UButton
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            class="h-9 w-9 justify-center p-0"
+            :title="t('index.closeSettings')"
+            :aria-label="t('index.closeSettings')"
+            @click="settingsOpen = false"
+          >
+            <WorkspaceIcon name="close" class="h-4 w-4" />
+          </UButton>
+        </div>
+
+        <form class="mt-4 space-y-3" @submit.prevent="saveProfile">
+          <p class="text-sm font-medium text-slate-700">
+            {{ t('index.profilePanelHint') }}
+          </p>
+
+          <div
+            class="space-y-2 rounded-2xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.76)] p-3"
+          >
+            <p
+              class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"
+            >
+              {{ t('index.appearance') }}
+            </p>
+            <div class="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                class="fd-appearance-option fd-appearance-light rounded-xl border px-3 py-2 text-sm font-medium transition"
+                :aria-pressed="profileForm.appearance === 'light'"
+                @click="selectAppearance('light')"
+              >
+                {{ t('index.appearanceLight') }}
+              </button>
+              <button
+                type="button"
+                class="fd-appearance-option fd-appearance-dark rounded-xl border px-3 py-2 text-sm font-medium transition"
+                :aria-pressed="profileForm.appearance === 'dark'"
+                @click="selectAppearance('dark')"
+              >
+                {{ t('index.appearanceDark') }}
+              </button>
+            </div>
+            <p class="text-xs leading-5 text-slate-500">
+              {{ t('index.appearanceHint') }}
+            </p>
+          </div>
+
+          <div class="grid grid-cols-4 gap-2">
+            <button
+              v-for="avatarId in avatarPresetIds"
+              :key="`desktop-modal-${avatarId}`"
+              type="button"
+              class="rounded-xl border p-2 text-center transition"
+              :class="[
+                profileForm.avatarId === avatarId
+                  ? 'border-[rgba(31,41,55,0.45)] shadow-sm'
+                  : 'border-[rgba(31,41,55,0.1)] hover:border-[rgba(31,41,55,0.25)]',
+                resolveAvatarToneClass(avatarId)
+              ]"
+              @click="profileForm.avatarId = avatarId"
+            >
+              <span class="text-lg leading-none">
+                {{ getAvatarPresetMeta(avatarId).symbol }}
+              </span>
+              <span
+                class="mt-1 block text-[11px] font-semibold tracking-[0.03em]"
+              >
+                {{ getAvatarPresetMeta(avatarId).zhName }}
+              </span>
+            </button>
+          </div>
+
+          <div class="grid gap-3 sm:grid-cols-2">
+            <UInput
+              v-model="profileForm.currentPassword"
+              size="lg"
+              type="password"
+              autocomplete="current-password"
+              :placeholder="t('index.currentPassword')"
+            />
+            <UInput
+              v-model="profileForm.newPassword"
+              size="lg"
+              type="password"
+              autocomplete="new-password"
+              :placeholder="t('index.newPassword')"
+            />
+          </div>
+
+          <p class="text-xs leading-5 text-slate-500">
+            {{ t('index.passwordHint') }}
+          </p>
+          <p v-if="profileError" class="text-sm text-rose-600">
+            {{ profileError }}
+          </p>
+          <p v-if="profileMessage" class="text-sm text-emerald-700">
+            {{ profileMessage }}
+          </p>
+
+          <div class="flex justify-end">
+            <UButton type="submit" color="neutral" :loading="profilePending">
+              {{ t('index.saveProfile') }}
+            </UButton>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <section
       class="overflow-hidden rounded-[2rem] border border-[rgba(31,41,55,0.1)] bg-[linear-gradient(135deg,rgba(255,251,244,0.96),rgba(244,237,227,0.88))] shadow-[0_24px_56px_rgba(120,98,69,0.12)]"
     >
@@ -824,109 +949,6 @@ async function saveProfile() {
                 {{ t('index.guestHint') }}
               </p>
             </div>
-
-            <form
-              v-if="currentUser && settingsOpen"
-              class="hidden space-y-3 rounded-2xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.72)] p-4 sm:block"
-              @submit.prevent="saveProfile"
-            >
-              <p class="text-sm font-medium text-slate-700">
-                {{ t('index.profilePanelHint') }}
-              </p>
-
-              <div
-                class="space-y-2 rounded-2xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.76)] p-3"
-              >
-                <p
-                  class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"
-                >
-                  {{ t('index.appearance') }}
-                </p>
-                <div class="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    class="fd-appearance-option fd-appearance-light rounded-xl border px-3 py-2 text-sm font-medium transition"
-                    :aria-pressed="profileForm.appearance === 'light'"
-                    @click="selectAppearance('light')"
-                  >
-                    {{ t('index.appearanceLight') }}
-                  </button>
-                  <button
-                    type="button"
-                    class="fd-appearance-option fd-appearance-dark rounded-xl border px-3 py-2 text-sm font-medium transition"
-                    :aria-pressed="profileForm.appearance === 'dark'"
-                    @click="selectAppearance('dark')"
-                  >
-                    {{ t('index.appearanceDark') }}
-                  </button>
-                </div>
-                <p class="text-xs leading-5 text-slate-500">
-                  {{ t('index.appearanceHint') }}
-                </p>
-              </div>
-
-              <div class="grid grid-cols-4 gap-2">
-                <button
-                  v-for="avatarId in avatarPresetIds"
-                  :key="avatarId"
-                  type="button"
-                  class="rounded-xl border p-2 text-center transition"
-                  :class="[
-                    profileForm.avatarId === avatarId
-                      ? 'border-[rgba(31,41,55,0.45)] shadow-sm'
-                      : 'border-[rgba(31,41,55,0.1)] hover:border-[rgba(31,41,55,0.25)]',
-                    resolveAvatarToneClass(avatarId)
-                  ]"
-                  @click="profileForm.avatarId = avatarId"
-                >
-                  <span class="text-lg leading-none">
-                    {{ getAvatarPresetMeta(avatarId).symbol }}
-                  </span>
-                  <span
-                    class="mt-1 block text-[11px] font-semibold tracking-[0.03em]"
-                  >
-                    {{ getAvatarPresetMeta(avatarId).zhName }}
-                  </span>
-                </button>
-              </div>
-
-              <div class="grid gap-3 sm:grid-cols-2">
-                <UInput
-                  v-model="profileForm.currentPassword"
-                  size="lg"
-                  type="password"
-                  autocomplete="current-password"
-                  :placeholder="t('index.currentPassword')"
-                />
-                <UInput
-                  v-model="profileForm.newPassword"
-                  size="lg"
-                  type="password"
-                  autocomplete="new-password"
-                  :placeholder="t('index.newPassword')"
-                />
-              </div>
-
-              <p class="text-xs leading-5 text-slate-500">
-                {{ t('index.passwordHint') }}
-              </p>
-              <p v-if="profileError" class="text-sm text-rose-600">
-                {{ profileError }}
-              </p>
-              <p v-if="profileMessage" class="text-sm text-emerald-700">
-                {{ profileMessage }}
-              </p>
-
-              <div class="flex justify-end">
-                <UButton
-                  type="submit"
-                  color="neutral"
-                  :loading="profilePending"
-                >
-                  {{ t('index.saveProfile') }}
-                </UButton>
-              </div>
-            </form>
 
             <form
               v-if="currentUser"
