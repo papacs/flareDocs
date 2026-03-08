@@ -179,7 +179,7 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'workspace.folderMoveHint':
       '目录也可以移动到其他目录下，移动后会一起带上它下面的所有子文档。',
     'workspace.uploadHint':
-      '可直接拖拽图片进编辑器，或用工具栏插图。编辑时在“编辑 / 预览”标签间切换即可查看渲染效果。',
+      '可直接拖拽图片进编辑器，或用工具栏插图。编辑区默认是实时预览风格：只有当前编辑行显示 Markdown 源码，其余内容按接近预览样式展示。',
     'workspace.pickDocument': '从左侧树中选择一个文档开始阅读或编辑。',
     'audit.kicker': '审计',
     'audit.activity': ({ name }) => `${name} 活动记录`,
@@ -421,7 +421,7 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'workspace.folderMoveHint':
       'Folders can also be moved into other folders, and their child documents move with them.',
     'workspace.uploadHint':
-      'Drag images into the editor or use the toolbar image action. Use the Write / Preview tabs while editing to inspect the rendered result.',
+      'Drag images into the editor or use the toolbar image action. The editor now uses a live-preview style: only the active editing line shows Markdown source while surrounding content stays close to rendered formatting.',
     'workspace.pickDocument':
       'Pick a document from the tree to start reading or editing.',
     'audit.kicker': 'Audit',

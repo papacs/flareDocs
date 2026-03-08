@@ -1946,8 +1946,275 @@ body {
     color: var(--fd-ink) !important;
   }
 
+  .fd-editor-shell .fd-live-preview .CodeMirror-code > div {
+    transition:
+      background-color 140ms ease,
+      border-color 140ms ease;
+  }
+
+  .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div.fd-live-preview-active-line {
+    background: rgba(180, 83, 9, 0.08);
+    border-radius: 0.42rem;
+  }
+
+  .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div:not(.fd-live-preview-active-line)
+    .cm-formatting,
+  .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-line:not(.fd-live-preview-active-line)
+    .cm-formatting,
+  .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div:not(.fd-live-preview-active-line)
+    .cm-formatting-header {
+    color: transparent !important;
+    opacity: 0;
+  }
+
+  .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div:not(.fd-live-preview-active-line)
+    .CodeMirror-line,
+  .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div:not(.fd-live-preview-active-line)
+    .cm-header,
+  .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-line:not(.fd-live-preview-active-line)
+    .cm-header {
+    color: var(--fd-ink) !important;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div:not(.fd-live-preview-active-line)
+    .CodeMirror-line
+    span {
+    color: var(--fd-ink) !important;
+  }
+
+  .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div:not(.fd-live-preview-active-line)
+    .CodeMirror-line,
+  .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div:not(.fd-live-preview-active-line)
+    .CodeMirror-line
+    *,
+  .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div:not(.fd-live-preview-active-line)
+    .CodeMirror-line
+    span[class*='cm-'] {
+    color: var(--fd-ink) !important;
+  }
+
+  .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div:not(.fd-live-preview-active-line)
+    .cm-header-1,
+  .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-line:not(.fd-live-preview-active-line)
+    .cm-header-1 {
+    font-size: 1.7rem;
+    line-height: 1.35;
+  }
+
+  .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div:not(.fd-live-preview-active-line)
+    .cm-header-2,
+  .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-line:not(.fd-live-preview-active-line)
+    .cm-header-2 {
+    font-size: 1.45rem;
+    line-height: 1.38;
+  }
+
+  .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div:not(.fd-live-preview-active-line)
+    .cm-header-3,
+  .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-line:not(.fd-live-preview-active-line)
+    .cm-header-3 {
+    font-size: 1.22rem;
+    line-height: 1.42;
+  }
+
+  .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div:not(.fd-live-preview-active-line)
+    .cm-strong,
+  .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-line:not(.fd-live-preview-active-line)
+    .cm-strong {
+    font-weight: 700 !important;
+  }
+
+  .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div:not(.fd-live-preview-active-line)
+    .cm-em,
+  .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-line:not(.fd-live-preview-active-line)
+    .cm-em {
+    font-style: italic !important;
+  }
+
+  .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div:not(.fd-live-preview-active-line)
+    .cm-quote,
+  .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-line:not(.fd-live-preview-active-line)
+    .cm-quote {
+    color: rgba(87, 83, 78, 0.8) !important;
+  }
+
   .fd-editor-shell .CodeMirror-cursor {
     border-left-color: rgba(31, 41, 55, 0.72) !important;
+  }
+
+  .fd-editor-shell .fd-md-syntax-hidden {
+    color: transparent !important;
+    opacity: 0;
+  }
+
+  .fd-editor-shell .fd-live-render-block {
+    padding: 0.15rem 0;
+    cursor: text;
+    line-height: 0;
+  }
+
+  .fd-editor-shell .fd-live-render-line {
+    cursor: text;
+    display: block;
+  }
+
+  .fd-editor-shell .fd-live-render-block > * + * {
+    margin-top: 0.05rem !important;
+  }
+
+  .fd-editor-shell .fd-live-render-line p {
+    margin: 0;
+    line-height: inherit;
+  }
+
+  .fd-editor-shell .fd-live-render-line ul,
+  .fd-editor-shell .fd-live-render-line ol {
+    margin: 0;
+    padding-left: 1.45rem;
+  }
+
+  .fd-editor-shell .fd-live-render-line li {
+    margin: 0;
+    line-height: 1.75;
+  }
+
+  .fd-editor-shell .fd-live-render-block > *:first-child {
+    margin-top: 0;
+  }
+
+  .fd-editor-shell .fd-live-render-block > *:last-child {
+    margin-bottom: 0;
+  }
+
+  .fd-editor-shell .fd-live-render-block table {
+    margin: 0.4rem 0;
+  }
+
+  .fd-editor-shell .fd-live-render-block ul,
+  .fd-editor-shell .fd-live-render-block ol {
+    margin: 0.08rem 0;
+    padding-left: 1.45rem;
+  }
+
+  .fd-editor-shell .fd-live-render-block ul {
+    list-style: disc;
+  }
+
+  .fd-editor-shell .fd-live-render-block ol {
+    list-style: decimal;
+  }
+
+  .fd-editor-shell .fd-live-render-block li {
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  .fd-editor-shell .fd-live-render-block li > p {
+    display: inline;
+    margin: 0;
+    line-height: inherit;
+  }
+
+  .fd-editor-shell .fd-live-render-block .fd-math-block {
+    margin: 0.35rem 0;
+  }
+
+  .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div.fd-live-preview-hr
+    .CodeMirror-line,
+  .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div.fd-live-preview-table-separator
+    .CodeMirror-line {
+    position: relative;
+    min-height: 1rem;
+    color: transparent !important;
+  }
+
+  .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div.fd-live-preview-hr
+    .CodeMirror-line::after,
+  .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div.fd-live-preview-table-separator
+    .CodeMirror-line::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    border-top: 1px solid rgba(100, 116, 139, 0.45);
+    transform: translateY(-50%);
+    pointer-events: none;
   }
 
   .fd-editor-shell .CodeMirror-scroll,
@@ -2009,6 +2276,93 @@ body {
   html.fd-theme-dark .fd-editor-shell .CodeMirror-lines {
     background: rgba(9, 16, 38, 0.94) !important;
     color: #dbe6f5 !important;
+  }
+
+  html.fd-theme-dark
+    .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div:not(.fd-live-preview-active-line)
+    .CodeMirror-line,
+  html.fd-theme-dark
+    .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div:not(.fd-live-preview-active-line)
+    .cm-header,
+  html.fd-theme-dark
+    .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-line:not(.fd-live-preview-active-line)
+    .cm-header {
+    color: #dbe6f5 !important;
+  }
+
+  html.fd-theme-dark
+    .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div:not(.fd-live-preview-active-line)
+    .CodeMirror-line,
+  html.fd-theme-dark
+    .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div:not(.fd-live-preview-active-line)
+    .CodeMirror-line
+    * {
+    color: #dbe6f5 !important;
+  }
+
+  html.fd-theme-dark
+    .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div:not(.fd-live-preview-active-line)
+    .CodeMirror-line
+    span[class*='cm-'] {
+    color: #dbe6f5 !important;
+  }
+
+  html.fd-theme-dark
+    .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div.fd-live-preview-active-line {
+    background: rgba(148, 163, 184, 0.14);
+  }
+
+  html.fd-theme-dark
+    .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div:not(.fd-live-preview-active-line)
+    .cm-quote,
+  html.fd-theme-dark
+    .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-line:not(.fd-live-preview-active-line)
+    .cm-quote {
+    color: rgba(190, 208, 229, 0.78) !important;
+  }
+
+  html.fd-theme-dark
+    .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div.fd-live-preview-hr
+    .CodeMirror-line::after,
+  html.fd-theme-dark
+    .fd-editor-shell
+    .fd-live-preview
+    .CodeMirror-code
+    > div.fd-live-preview-table-separator
+    .CodeMirror-line::after {
+    border-top-color: rgba(148, 163, 184, 0.44);
+  }
+
+  html.fd-theme-dark .fd-editor-shell .fd-live-render-block {
+    color: #dbe6f5;
   }
 
   html.fd-theme-dark .fd-editor-shell .CodeMirror-cursor {

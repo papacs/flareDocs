@@ -16,40 +16,44 @@ function renderMath(expression: string, displayMode: boolean) {
 }
 
 function mathPlugin(md: MarkdownIt) {
-  md.inline.ruler.after('escape', 'fd_math_inline', (state: any, silent: boolean) => {
-    const start = state.pos
-    const source = state.src
+  md.inline.ruler.after(
+    'escape',
+    'fd_math_inline',
+    (state: any, silent: boolean) => {
+      const start = state.pos
+      const source = state.src
 
-    if (source[start] !== '$' || source[start + 1] === '$') {
-      return false
-    }
-
-    let end = start + 1
-
-    while (end < source.length) {
-      if (source[end] === '$' && source[end - 1] !== '\\') {
-        break
-      }
-
-      if (source[end] === '\n') {
+      if (source[start] !== '$' || source[start + 1] === '$') {
         return false
       }
 
-      end += 1
-    }
+      let end = start + 1
 
-    if (end >= source.length || end === start + 1) {
-      return false
-    }
+      while (end < source.length) {
+        if (source[end] === '$' && source[end - 1] !== '\\') {
+          break
+        }
 
-    if (!silent) {
-      const token = state.push('fd_math_inline', 'math', 0)
-      token.content = source.slice(start + 1, end)
-    }
+        if (source[end] === '\n') {
+          return false
+        }
 
-    state.pos = end + 1
-    return true
-  })
+        end += 1
+      }
+
+      if (end >= source.length || end === start + 1) {
+        return false
+      }
+
+      if (!silent) {
+        const token = state.push('fd_math_inline', 'math', 0)
+        token.content = source.slice(start + 1, end)
+      }
+
+      state.pos = end + 1
+      return true
+    }
+  )
 
   md.block.ruler.after(
     'blockquote',
@@ -66,7 +70,11 @@ function mathPlugin(md: MarkdownIt) {
       let nextLine = startLine
       let expression = ''
 
-      if (firstLine !== '$$' && firstLine.endsWith('$$') && firstLine.length > 4) {
+      if (
+        firstLine !== '$$' &&
+        firstLine.endsWith('$$') &&
+        firstLine.length > 4
+      ) {
         expression = firstLine.slice(2, -2)
       } else {
         expression = firstLine === '$$' ? '' : `${firstLine.slice(2)}\n`
@@ -113,7 +121,7 @@ const markdown = new MarkdownIt({
   html: false,
   linkify: true,
   typographer: true,
-  breaks: true
+  breaks: false
 }).use(mathPlugin)
 
 export function renderMarkdown(value: string) {
