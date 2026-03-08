@@ -276,6 +276,7 @@ After each implementation step:
 
 ## Recent Notes
 
+- Added local admin password recovery utility: new [reset-password-local.ts](/mnt/f/newworkspace/flareDocs/scripts/reset-password-local.ts) and npm script `users:reset-password:local` in [package.json](/mnt/f/newworkspace/flareDocs/package.json), with README quick usage under local FAQ for forgotten `admin` password scenarios.
 - Refined mobile homepage action density in [index.vue](/mnt/f/newworkspace/flareDocs/app/pages/index.vue): moved "create space" out of the top-right mobile icon cluster into the main action area under the hero copy, and hid the install icon on small screens to prevent header overflow/cropping.
 - Rewrote homepage hero copy in [useAppLocale.ts](/mnt/f/newworkspace/flareDocs/app/composables/useAppLocale.ts) (zh/en) to a shorter, clearer message focused on real usage flow (space -> folder/doc -> collaboration).
 - Fixed mobile homepage and workspace drawer behavior in [index.vue](/mnt/f/newworkspace/flareDocs/app/pages/index.vue) + [spaces/[spaceId].vue](/mnt/f/newworkspace/flareDocs/app/pages/spaces/[spaceId].vue): hide GitHub icon on small screens to prevent right-top action overflow, reorder mobile quick actions, and keep the mobile tree drawer open across workspace switching until the user picks a document/folder.

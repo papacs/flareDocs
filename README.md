@@ -316,6 +316,24 @@ pnpm project:setup
 
 这是预期行为。当前版本已关闭自由注册，账号统一由系统管理员在主页的“人员管理”页面创建。
 
+### 6. 本地忘记 `admin` 密码
+
+可直接重置本地 D1 中的账号密码（无需登录）：
+
+```bash
+pnpm users:reset-password:local admin <newPassword>
+```
+
+说明：
+
+- 密码长度需 `8-128` 字符
+- 默认会自动定位 `.wrangler/state/v3/d1/miniflare-D1DatabaseObject/*.sqlite`
+- 若你有多个本地数据库文件，可手动指定：
+
+```bash
+pnpm users:reset-password:local admin <newPassword> --db-file <absolute-or-relative-sqlite-path>
+```
+
 ## Cloudflare 部署准备
 
 ### A. 首次部署（推荐）

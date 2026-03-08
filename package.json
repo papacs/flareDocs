@@ -17,6 +17,7 @@
     "postinstall": "nuxt prepare",
     "preview": "nuxt preview",
     "project:setup": "node --experimental-strip-types scripts/setup.ts",
+    "users:reset-password:local": "node --experimental-strip-types scripts/reset-password-local.ts",
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {
