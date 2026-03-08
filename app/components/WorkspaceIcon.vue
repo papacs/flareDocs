@@ -17,6 +17,7 @@ defineProps<{
     | 'github'
     | 'home'
     | 'info'
+    | 'install'
     | 'markdown'
     | 'more'
     | 'move'
@@ -315,6 +316,21 @@ defineProps<{
     <circle cx="12" cy="12" r="8.5" />
     <path d="M12 10.4v5.1" />
     <circle cx="12" cy="7.4" r="0.9" fill="currentColor" stroke="none" />
+  </svg>
+
+  <svg
+    v-else-if="name === 'install'"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M12 4v10" />
+    <path d="m8.5 10.5 3.5 3.5 3.5-3.5" />
+    <path d="M5 18.5h14" />
   </svg>
 
   <svg

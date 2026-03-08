@@ -68,6 +68,13 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'index.appearanceDark': '深色',
     'index.appearanceHint': '默认浅色，可切换为深色外观。',
     'index.userManagement': '人员管理',
+    'index.installApp': '安装到桌面',
+    'index.installIosTitle': '安装到主屏幕',
+    'index.installIosHint':
+      '在 Safari 中点击底部“分享”按钮，然后选择“添加到主屏幕”。',
+    'index.installAccepted': '应用安装请求已提交。',
+    'index.installDismissed': '你取消了安装，可稍后再试。',
+    'index.installUnavailable': '当前浏览器暂不支持一键安装。',
     'index.logout': '退出登录',
     'index.loggedInHint':
       '你可以先创建空间，再进入文档工作区。手机端会保持上下布局，不会挤成难用的侧栏。',
@@ -330,6 +337,14 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'index.appearanceHint':
       'Light is default. Switch to dark for a dimmer interface.',
     'index.userManagement': 'User Management',
+    'index.installApp': 'Install App',
+    'index.installIosTitle': 'Install To Home Screen',
+    'index.installIosHint':
+      'In Safari, tap Share and then choose Add to Home Screen.',
+    'index.installAccepted': 'Installation request submitted.',
+    'index.installDismissed': 'Installation was dismissed.',
+    'index.installUnavailable':
+      'One-click install is not available in this browser.',
     'index.logout': 'Logout',
     'index.loggedInHint':
       'You can create spaces here and then open the document workspace. On phones, this panel stays above the list instead of squeezing into a side rail.',

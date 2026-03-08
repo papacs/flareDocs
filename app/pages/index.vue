@@ -8,6 +8,14 @@ import {
 } from '../utils/avatar-presets'
 import { FetchError } from 'ofetch'
 
+type BeforeInstallPromptEventLike = Event & {
+  prompt: () => Promise<void>
+  userChoice: Promise<{
+    outcome: 'accepted' | 'dismissed'
+    platform: string
+  }>
+}
+
 const { t, visibilityLabel } = useAppLocale()
 const { appearance, setAppearance } = useAppearance()
 const githubRepoUrl = 'https://github.com/papacs/flareDocs'
@@ -138,6 +146,10 @@ const renameSpaceTarget = computed(
 const renameForm = reactive({
   name: ''
 })
+const installPromptEvent = ref<BeforeInstallPromptEventLike | null>(null)
+const installAvailable = ref(false)
+const installMessage = ref('')
+const showIosInstallHint = ref(false)
 
 watch(
   currentUser,
@@ -159,16 +171,100 @@ function readRecentSpaceId() {
     Number.isInteger(parsedValue) && parsedValue > 0 ? parsedValue : null
 }
 
+function updateInstallEntryState() {
+  if (!import.meta.client) {
+    return
+  }
+
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+  const userAgent = window.navigator.userAgent.toLowerCase()
+  const isIosDevice = /iphone|ipad|ipod/.test(userAgent)
+  const isSafari =
+    /safari/.test(userAgent) && !/crios|fxios|edgios/.test(userAgent)
+
+  if (isStandalone) {
+    installAvailable.value = false
+    showIosInstallHint.value = false
+    return
+  }
+
+  if (installPromptEvent.value) {
+    installAvailable.value = true
+    showIosInstallHint.value = false
+    return
+  }
+
+  if (isIosDevice && isSafari) {
+    installAvailable.value = true
+    return
+  }
+
+  installAvailable.value = false
+}
+
+function handleBeforeInstallPrompt(event: Event) {
+  event.preventDefault()
+  installPromptEvent.value = event as BeforeInstallPromptEventLike
+  updateInstallEntryState()
+}
+
+function handleAppInstalled() {
+  installPromptEvent.value = null
+  installAvailable.value = false
+  showIosInstallHint.value = false
+  installMessage.value = ''
+}
+
+async function triggerInstall() {
+  if (!import.meta.client) {
+    return
+  }
+
+  installMessage.value = ''
+
+  if (installPromptEvent.value) {
+    await installPromptEvent.value.prompt()
+    const choiceResult = await installPromptEvent.value.userChoice
+
+    if (choiceResult.outcome === 'accepted') {
+      installMessage.value = t('index.installAccepted')
+      installPromptEvent.value = null
+      installAvailable.value = false
+      return
+    }
+
+    installMessage.value = t('index.installDismissed')
+    return
+  }
+
+  const userAgent = window.navigator.userAgent.toLowerCase()
+  const isIosDevice = /iphone|ipad|ipod/.test(userAgent)
+  const isSafari =
+    /safari/.test(userAgent) && !/crios|fxios|edgios/.test(userAgent)
+
+  if (isIosDevice && isSafari) {
+    showIosInstallHint.value = true
+    return
+  }
+
+  installMessage.value = t('index.installUnavailable')
+}
+
 onMounted(() => {
   readRecentSpaceId()
   if (import.meta.client) {
     window.addEventListener('pointerdown', handleWindowPointerdown)
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    window.addEventListener('appinstalled', handleAppInstalled)
+    updateInstallEntryState()
   }
 })
 
 onBeforeUnmount(() => {
   if (import.meta.client) {
     window.removeEventListener('pointerdown', handleWindowPointerdown)
+    window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    window.removeEventListener('appinstalled', handleAppInstalled)
   }
 })
 
@@ -732,6 +828,18 @@ async function saveProfile() {
                 >
                   <WorkspaceIcon name="github" class="h-4 w-4" />
                 </a>
+                <UButton
+                  v-if="installAvailable"
+                  color="neutral"
+                  variant="ghost"
+                  size="sm"
+                  class="h-9 w-9 justify-center p-0"
+                  :title="t('index.installApp')"
+                  :aria-label="t('index.installApp')"
+                  @click="triggerInstall"
+                >
+                  <WorkspaceIcon name="install" class="h-4 w-4" />
+                </UButton>
                 <div class="flex items-center gap-2 sm:hidden">
                   <template v-if="currentUser">
                     <UButton
@@ -788,6 +896,9 @@ async function saveProfile() {
             >
               {{ t('index.title') }}
             </h1>
+            <p v-if="installMessage" class="mt-2 text-sm text-slate-500">
+              {{ installMessage }}
+            </p>
             <p
               class="mt-4 max-w-2xl text-base leading-7 text-slate-500 sm:text-lg"
             >
@@ -1132,6 +1243,43 @@ async function saveProfile() {
         </p>
       </article>
     </section>
+
+    <div
+      v-if="showIosInstallHint"
+      class="fd-space-delete-modal-wrap"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="t('index.installApp')"
+    >
+      <button
+        type="button"
+        class="fd-space-delete-modal-backdrop"
+        :aria-label="t('common.cancel')"
+        @click="showIosInstallHint = false"
+      />
+      <div class="fd-space-delete-modal">
+        <p
+          class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600"
+        >
+          {{ t('index.installApp') }}
+        </p>
+        <h3 class="mt-2 text-xl font-semibold text-slate-800">
+          {{ t('index.installIosTitle') }}
+        </h3>
+        <p class="mt-3 text-sm leading-6 text-slate-600">
+          {{ t('index.installIosHint') }}
+        </p>
+        <div class="mt-5 flex items-center justify-end gap-2">
+          <UButton
+            color="neutral"
+            variant="ghost"
+            @click="showIosInstallHint = false"
+          >
+            {{ t('common.cancel') }}
+          </UButton>
+        </div>
+      </div>
+    </div>
 
     <div
       v-if="renameSpaceTarget"

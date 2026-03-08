@@ -27,6 +27,18 @@ export default defineNuxtConfig({
           name: 'description',
           content:
             'A lightweight Markdown-first team knowledge base built for Cloudflare Pages, D1, and R2.'
+        },
+        {
+          name: 'theme-color',
+          content: '#0f172a'
+        },
+        {
+          name: 'apple-mobile-web-app-capable',
+          content: 'yes'
+        },
+        {
+          name: 'apple-mobile-web-app-status-bar-style',
+          content: 'default'
         }
       ],
       link: [
@@ -34,6 +46,10 @@ export default defineNuxtConfig({
           rel: 'icon',
           type: 'image/svg+xml',
           href: '/brand-icon.svg'
+        },
+        {
+          rel: 'manifest',
+          href: '/manifest.webmanifest'
         }
       ]
     }
