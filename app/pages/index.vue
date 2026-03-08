@@ -495,7 +495,7 @@ async function saveProfile() {
           </p>
 
           <div
-            class="space-y-2 rounded-2xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.76)] p-3"
+            class="fd-settings-surface space-y-2 rounded-2xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.76)] p-3"
           >
             <p
               class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"
@@ -620,7 +620,7 @@ async function saveProfile() {
           </p>
 
           <div
-            class="space-y-2 rounded-2xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.76)] p-3"
+            class="fd-settings-surface space-y-2 rounded-2xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.76)] p-3"
           >
             <p
               class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"
