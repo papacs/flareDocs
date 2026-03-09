@@ -52,6 +52,7 @@ export type DocumentTreeItem = {
   parentId: number | null
   isFolder: boolean
   version: number
+  createdAt: number
   updatedAt: number
 }
 

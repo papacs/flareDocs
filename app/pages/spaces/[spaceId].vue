@@ -83,6 +83,12 @@ const documentLoadFallbackTimer = ref<ReturnType<typeof setTimeout> | null>(
 const documentLoadToken = ref(0)
 const documentCache = new Map<number, DocumentDetail>()
 const prefetchingDocumentIds = new Set<number>()
+const treeItems = ref<DocumentTreeItem[]>([])
+const loadedTreeParentKeys = ref<string[]>([])
+const treeFullyLoaded = ref(false)
+const treeLoadPending = ref(false)
+const treeLoadProgress = ref(0)
+const treeLoadLabel = ref('')
 
 type SpeechRecognitionLike = {
   lang: string
@@ -170,15 +176,26 @@ const { data: spaceResponse } = await useAsyncData(
     )
 )
 
-const { data: spacesResponse } = await useAsyncData(
+const { data: spacesResponse, refresh: refreshSpaces } = await useAsyncData(
   'workspace-spaces-index',
   () =>
     $fetch<ApiResponse<{ spaces: SpaceSummary[] }>>('/api/spaces', {
       headers: requestHeaders
-    })
+    }),
+  {
+    server: false,
+    immediate: false,
+    default: () =>
+      ({
+        ok: true,
+        data: {
+          spaces: []
+        }
+      }) satisfies ApiResponse<{ spaces: SpaceSummary[] }>
+  }
 )
 
-const { data: treeResponse, refresh: refreshTree } = await useAsyncData(
+const { data: rootTreeResponse, refresh: refreshRootTree } = await useAsyncData(
   () => `workspace-tree-${spaceId.value}`,
   () =>
     $fetch<ApiResponse<{ documents: DocumentTreeItem[] }>>(
@@ -199,15 +216,13 @@ const spaces = computed(() =>
     ? spacesResponse.value.data.spaces
     : []
 )
-const treeItems = computed(() =>
-  treeResponse.value && treeResponse.value.ok
-    ? treeResponse.value.data.documents
-    : []
-)
 const treeItemMap = computed(
   () => new Map(treeItems.value.map((item) => [item.id, item]))
 )
 const expandedFolderIdSet = computed(() => new Set(expandedFolderIds.value))
+const loadedTreeParentKeySet = computed(
+  () => new Set(loadedTreeParentKeys.value)
+)
 
 const selectedDocument = ref<DocumentDetail | null>(null)
 
@@ -477,8 +492,187 @@ function sortTreeItems(items: DocumentTreeItem[]) {
       return left.isFolder ? -1 : 1
     }
 
+    if (left.createdAt !== right.createdAt) {
+      return right.createdAt - left.createdAt
+    }
+
+    if (left.updatedAt !== right.updatedAt) {
+      return right.updatedAt - left.updatedAt
+    }
+
     return left.title.localeCompare(right.title, 'zh-CN')
   })
+}
+
+function getParentKey(parentId: null | number) {
+  return parentId === null ? 'root' : String(parentId)
+}
+
+function toTreeItem(document: DocumentDetail): DocumentTreeItem {
+  return {
+    id: document.id,
+    title: document.title,
+    parentId: document.parentId,
+    isFolder: document.isFolder,
+    version: document.version,
+    createdAt: document.createdAt,
+    updatedAt: document.updatedAt
+  }
+}
+
+function collectLoadedDescendantIds(rootIds: number[]) {
+  const byParent = new Map<number | null, number[]>()
+
+  for (const item of treeItems.value) {
+    const siblings = byParent.get(item.parentId) ?? []
+    siblings.push(item.id)
+    byParent.set(item.parentId, siblings)
+  }
+
+  const descendants = new Set<number>()
+  const stack = [...rootIds]
+
+  while (stack.length) {
+    const currentId = stack.pop()
+
+    if (!currentId) {
+      continue
+    }
+
+    const children = byParent.get(currentId) ?? []
+
+    for (const childId of children) {
+      if (!descendants.has(childId)) {
+        descendants.add(childId)
+        stack.push(childId)
+      }
+    }
+  }
+
+  return descendants
+}
+
+function markTreeParentLoaded(parentId: null | number) {
+  const key = getParentKey(parentId)
+
+  if (!loadedTreeParentKeySet.value.has(key)) {
+    loadedTreeParentKeys.value = [...loadedTreeParentKeys.value, key]
+  }
+}
+
+function replaceTreeBranch(parentId: null | number, items: DocumentTreeItem[]) {
+  const currentChildIds = treeItems.value
+    .filter((item) => item.parentId === parentId)
+    .map((item) => item.id)
+  const nextChildIds = new Set(items.map((item) => item.id))
+  const removedChildIds = currentChildIds.filter((id) => !nextChildIds.has(id))
+  const removedDescendantIds = collectLoadedDescendantIds(removedChildIds)
+
+  treeItems.value = [
+    ...treeItems.value.filter(
+      (item) =>
+        item.parentId !== parentId &&
+        !removedDescendantIds.has(item.id) &&
+        !removedChildIds.includes(item.id)
+    ),
+    ...items
+  ]
+
+  markTreeParentLoaded(parentId)
+}
+
+function upsertTreeItem(item: DocumentTreeItem) {
+  treeItems.value = [
+    ...treeItems.value.filter((existingItem) => existingItem.id !== item.id),
+    item
+  ]
+}
+
+function removeTreeSubtree(documentId: number) {
+  const removedIds = collectLoadedDescendantIds([documentId])
+  removedIds.add(documentId)
+  treeItems.value = treeItems.value.filter((item) => !removedIds.has(item.id))
+  expandedFolderIds.value = expandedFolderIds.value.filter(
+    (id) => !removedIds.has(id)
+  )
+}
+
+async function fetchTreeBranch(
+  parentId: null | number,
+  options: { all?: boolean } = {}
+) {
+  const query = options.all
+    ? { all: '1' }
+    : parentId === null
+      ? undefined
+      : { parentId: String(parentId) }
+
+  const response = await $fetch<ApiResponse<{ documents: DocumentTreeItem[] }>>(
+    `/api/spaces/${spaceId.value}/tree`,
+    {
+      headers: requestHeaders,
+      query
+    }
+  )
+
+  if (!response.ok) {
+    throw new Error(response.error.message)
+  }
+
+  return response.data.documents
+}
+
+async function loadTreeBranch(
+  parentId: null | number,
+  options: { force?: boolean } = {}
+) {
+  const key = getParentKey(parentId)
+
+  if (
+    !options.force &&
+    (treeFullyLoaded.value || loadedTreeParentKeySet.value.has(key))
+  ) {
+    return
+  }
+
+  const branch =
+    parentId === null && !options.force && rootTreeResponse.value?.ok
+      ? rootTreeResponse.value.data.documents
+      : await fetchTreeBranch(parentId)
+
+  replaceTreeBranch(parentId, branch)
+}
+
+async function loadEntireTree(options: { withProgress?: boolean } = {}) {
+  const withProgress = options.withProgress ?? false
+
+  if (withProgress) {
+    treeLoadPending.value = true
+    treeLoadProgress.value = 12
+    treeLoadLabel.value = t('workspace.expandAll')
+  }
+
+  try {
+    const allItems = await fetchTreeBranch(null, { all: true })
+    treeItems.value = allItems
+    treeFullyLoaded.value = true
+    loadedTreeParentKeys.value = [
+      'root',
+      ...allItems.filter((item) => item.isFolder).map((item) => String(item.id))
+    ]
+
+    if (withProgress) {
+      treeLoadProgress.value = 100
+    }
+  } finally {
+    if (withProgress) {
+      window.setTimeout(() => {
+        treeLoadPending.value = false
+        treeLoadProgress.value = 0
+        treeLoadLabel.value = ''
+      }, 180)
+    }
+  }
 }
 
 const treeNodes = computed<TreeNode[]>(() => {
@@ -593,15 +787,26 @@ function persistExpandedFolders() {
   )
 }
 
-function expandDocumentPath(documentId: number | null) {
+async function expandDocumentPath(documentId: number | null) {
   if (!documentId) {
     return
+  }
+
+  if (!treeItemMap.value.has(documentId) && !treeFullyLoaded.value) {
+    try {
+      await loadEntireTree()
+    } catch {
+      return
+    }
   }
 
   const expanded = new Set(expandedFolderIds.value)
   let cursor = treeItemMap.value.get(documentId)?.parentId ?? null
 
   while (cursor) {
+    if (!treeFullyLoaded.value) {
+      await loadTreeBranch(cursor)
+    }
     expanded.add(cursor)
     cursor = treeItemMap.value.get(cursor)?.parentId ?? null
   }
@@ -609,7 +814,8 @@ function expandDocumentPath(documentId: number | null) {
   expandedFolderIds.value = [...expanded]
 }
 
-function expandAllFolders() {
+async function expandAllFolders() {
+  await loadEntireTree({ withProgress: true })
   expandedFolderIds.value = treeItems.value
     .filter((document) => document.isFolder)
     .map((document) => document.id)
@@ -685,9 +891,43 @@ watch(
   spaceId,
   () => {
     treeReady.value = false
+    treeItems.value = []
+    loadedTreeParentKeys.value = []
+    treeFullyLoaded.value = false
+    treeLoadPending.value = false
+    treeLoadProgress.value = 0
+    treeLoadLabel.value = ''
     documentCache.clear()
     prefetchingDocumentIds.clear()
     restoreExpandedFolders()
+  },
+  { immediate: true }
+)
+
+watch(
+  rootTreeResponse,
+  async (response) => {
+    if (!response?.ok) {
+      treeItems.value = []
+      loadedTreeParentKeys.value = []
+      treeReady.value = false
+      return
+    }
+
+    replaceTreeBranch(null, response.data.documents)
+    treeReady.value = true
+
+    const initialExpandedIds = persistedExpandedFolderIds.value ?? []
+
+    if (!treeFullyLoaded.value && initialExpandedIds.length) {
+      for (const folderId of initialExpandedIds) {
+        try {
+          await loadTreeBranch(folderId)
+        } catch {
+          // ignore stale expanded folders
+        }
+      }
+    }
   },
   { immediate: true }
 )
@@ -716,15 +956,28 @@ watch(
   { immediate: true }
 )
 
+watch(isSpaceMenuOpen, async (open) => {
+  if (
+    !open ||
+    !import.meta.client ||
+    (spacesResponse.value?.ok && spacesResponse.value.data.spaces.length > 0)
+  ) {
+    return
+  }
+
+  await refreshSpaces()
+})
+
 watch(
   treeItems,
   async (documents) => {
     if (!documents.length) {
       clearAutoSaveTimer()
-      selectedDocumentId.value = null
-      selectedDocument.value = null
       expandedFolderIds.value = []
       treeReady.value = false
+      if (!selectedDocumentId.value) {
+        selectedDocument.value = null
+      }
       return
     }
 
@@ -733,11 +986,7 @@ watch(
       .map((document) => document.id)
     const expanded = treeReady.value
       ? new Set(expandedFolderIds.value)
-      : new Set<number>(
-          persistedExpandedFolderIds.value?.length
-            ? persistedExpandedFolderIds.value
-            : folderIds
-        )
+      : new Set<number>(persistedExpandedFolderIds.value ?? [])
 
     expandedFolderIds.value = [...expanded].filter((folderId) =>
       folderIds.includes(folderId)
@@ -751,12 +1000,10 @@ watch(
       )
 
     if (!hasSelectedDocument) {
-      selectedDocumentId.value = null
-      selectedDocument.value = null
       return
     }
 
-    expandDocumentPath(selectedDocumentId.value)
+    await expandDocumentPath(selectedDocumentId.value)
 
     // Keep editor cursor stable while typing: do not background-refresh
     // the current document during edit mode.
@@ -787,7 +1034,7 @@ watch(selectedDocumentId, async (documentId) => {
   await loadDocument(documentId)
   isEditing.value = false
   isRenaming.value = false
-  expandDocumentPath(documentId)
+  await expandDocumentPath(documentId)
   nextTick(() => {
     if (documentScrollRef.value) {
       documentScrollRef.value.scrollTop = 0
@@ -1309,6 +1556,7 @@ async function loadDocument(
     if (response.ok) {
       workspaceError.value = ''
       documentCache.set(documentId, response.data.document)
+      upsertTreeItem(toTreeItem(response.data.document))
       if (!options.background || selectedDocumentId.value === documentId) {
         if (
           options.background &&
@@ -1356,12 +1604,15 @@ async function loadDocument(
   }
 }
 
-function toggleFolder(nodeId: number) {
+async function toggleFolder(nodeId: number) {
   const expanded = new Set(expandedFolderIds.value)
 
   if (expanded.has(nodeId)) {
     expanded.delete(nodeId)
   } else {
+    if (!treeFullyLoaded.value) {
+      await loadTreeBranch(nodeId)
+    }
     expanded.add(nodeId)
   }
 
@@ -1377,7 +1628,7 @@ function selectNode(node: TreeNode | DocumentTreeItem) {
   }
 
   selectedDocumentId.value = node.id
-  expandDocumentPath(node.id)
+  void expandDocumentPath(node.id)
   isMobileTreeOpen.value = false
   isActionMenuOpen.value = false
 }
@@ -1453,6 +1704,14 @@ function openTreeFromActionMenu() {
 }
 
 function toggleMovePanelFromActionMenu() {
+  if (!isMovePanelOpen.value && !treeFullyLoaded.value) {
+    void loadEntireTree({ withProgress: true }).then(() => {
+      isMovePanelOpen.value = true
+    })
+    isActionMenuOpen.value = false
+    return
+  }
+
   isMovePanelOpen.value = !isMovePanelOpen.value
   isActionMenuOpen.value = false
 }
@@ -1506,13 +1765,13 @@ async function saveDocument(options?: {
     if (response.ok) {
       selectedDocument.value = response.data.document
       documentCache.set(response.data.document.id, response.data.document)
+      upsertTreeItem(toTreeItem(response.data.document))
       saveState.value = 'saved'
       if (!keepEditing) {
         isEditing.value = false
         isRenaming.value = false
       }
-      await refreshTree()
-      expandDocumentPath(response.data.document.id)
+      await expandDocumentPath(response.data.document.id)
     }
   } catch (error: unknown) {
     const apiError = error as {
@@ -1584,11 +1843,19 @@ async function createNode() {
 
     createNodeTitle.value = ''
     createNodeMode.value = null
-    await refreshTree()
 
     if (response.ok) {
+      const parentId = response.data.document.parentId
+      if (parentId !== null) {
+        await loadTreeBranch(parentId, { force: true })
+        expandedFolderIds.value = [
+          ...new Set([...expandedFolderIds.value, parentId])
+        ]
+      } else {
+        await refreshRootTree()
+      }
       selectedDocumentId.value = response.data.document.id
-      expandDocumentPath(response.data.document.id)
+      await expandDocumentPath(response.data.document.id)
     }
   } catch (error: unknown) {
     const apiError = error as {
@@ -1630,10 +1897,10 @@ async function deleteDocument() {
       body: {}
     })
 
+    removeTreeSubtree(selectedDocument.value.id)
     selectedDocument.value = null
     documentCache.clear()
     selectedDocumentId.value = null
-    await refreshTree()
   } catch (error: unknown) {
     workspaceError.value =
       error instanceof Error ? error.message : 'Unable to delete item.'
@@ -1682,9 +1949,10 @@ async function moveDocument() {
     if (response.ok) {
       selectedDocument.value = response.data.document
       documentCache.set(response.data.document.id, response.data.document)
+      upsertTreeItem(toTreeItem(response.data.document))
       isMovePanelOpen.value = false
-      await refreshTree()
-      expandDocumentPath(response.data.document.id)
+      await loadEntireTree()
+      await expandDocumentPath(response.data.document.id)
     }
   } catch (error: unknown) {
     const apiError = error as {
@@ -2610,12 +2878,27 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
       <div class="fd-tree-heading">
         <div>
           <p class="text-xs text-slate-500">文档目录</p>
+          <div v-if="treeLoadPending" class="mt-1.5 space-y-1">
+            <p class="text-[11px] text-slate-400">
+              {{ treeLoadLabel || t('workspace.expandAll') }}
+              {{ Math.round(treeLoadProgress) }}%
+            </p>
+            <div
+              class="h-1.5 w-28 overflow-hidden rounded-full bg-slate-200/80"
+            >
+              <div
+                class="h-full rounded-full bg-amber-500 transition-[width] duration-200"
+                :style="{ width: `${Math.max(6, treeLoadProgress)}%` }"
+              />
+            </div>
+          </div>
         </div>
         <div class="flex items-center gap-1.5">
           <button
             type="button"
             class="fd-tree-header-button"
             :title="t('workspace.expandAll')"
+            :disabled="treeLoadPending"
             @click="expandAllFolders"
           >
             <WorkspaceIcon name="expand-all" class="h-4 w-4" />
@@ -2624,6 +2907,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
             type="button"
             class="fd-tree-header-button"
             :title="t('workspace.collapseAll')"
+            :disabled="treeLoadPending"
             @click="collapseAllFolders"
           >
             <WorkspaceIcon name="collapse-all" class="h-4 w-4" />
@@ -2700,6 +2984,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
             v-if="item.isFolder"
             type="button"
             class="fd-tree-toggle"
+            :disabled="treeLoadPending"
             @click="toggleFolder(item.id)"
           >
             <WorkspaceIcon

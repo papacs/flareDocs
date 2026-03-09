@@ -8,7 +8,6 @@ import { getAuthCookieOptions, issueAuthToken } from '../../utils/auth'
 import { getDb } from '../../utils/db'
 import { verifyPassword } from '../../utils/password'
 import { apiError, ok } from '../../utils/response'
-import { ensurePersonalWorkspace } from '../../utils/spaces'
 import { verifyCaptchaChallenge } from '../../utils/captcha'
 import {
   clearFailedLoginAttempts,
@@ -50,14 +49,26 @@ export default defineEventHandler(async (event) => {
   const captchaCode = body.captchaCode?.trim() ?? ''
 
   if (!username || !password) {
-    return rejectLogin(422, 'INVALID_CREDENTIALS', 'Username and password are required.')
+    return rejectLogin(
+      422,
+      'INVALID_CREDENTIALS',
+      'Username and password are required.'
+    )
   }
 
   if (!captchaToken || !captchaCode) {
-    return rejectLogin(422, 'CAPTCHA_REQUIRED', 'Captcha token and code are required.')
+    return rejectLogin(
+      422,
+      'CAPTCHA_REQUIRED',
+      'Captcha token and code are required.'
+    )
   }
 
-  const captchaValid = await verifyCaptchaChallenge(event, captchaToken, captchaCode)
+  const captchaValid = await verifyCaptchaChallenge(
+    event,
+    captchaToken,
+    captchaCode
+  )
 
   if (!captchaValid) {
     return rejectLogin(422, 'CAPTCHA_INVALID', 'Captcha validation failed.')
@@ -79,20 +90,31 @@ export default defineEventHandler(async (event) => {
     .limit(1)
 
   if (!user) {
-    return rejectLogin(401, 'INVALID_CREDENTIALS', 'Invalid username or password.')
+    return rejectLogin(
+      401,
+      'INVALID_CREDENTIALS',
+      'Invalid username or password.'
+    )
   }
 
   if (!user.isActive) {
-    return rejectLogin(401, 'INVALID_CREDENTIALS', 'Invalid username or password.')
+    return rejectLogin(
+      401,
+      'INVALID_CREDENTIALS',
+      'Invalid username or password.'
+    )
   }
 
   const passwordMatches = await verifyPassword(password, user.passwordHash)
 
   if (!passwordMatches) {
-    return rejectLogin(401, 'INVALID_CREDENTIALS', 'Invalid username or password.')
+    return rejectLogin(
+      401,
+      'INVALID_CREDENTIALS',
+      'Invalid username or password.'
+    )
   }
 
-  await ensurePersonalWorkspace(db, user)
   clearFailedLoginAttempts(event)
 
   const token = await issueAuthToken(event, {

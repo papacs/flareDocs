@@ -1,5 +1,11 @@
 import { SignJWT, jwtVerify, errors } from 'jose'
-import { deleteCookie, getCookie, getRequestURL, type H3Event } from 'h3'
+import {
+  deleteCookie,
+  getCookie,
+  getHeader,
+  getRequestURL,
+  type H3Event
+} from 'h3'
 import { eq } from 'drizzle-orm'
 import { useRuntimeConfig } from '#imports'
 
@@ -36,6 +42,35 @@ export function getAuthCookieName() {
 }
 
 function shouldUseSecureCookies(event: H3Event) {
+  const forwardedProto = getHeader(event, 'x-forwarded-proto')
+    ?.split(',')[0]
+    ?.trim()
+    ?.toLowerCase()
+
+  if (forwardedProto) {
+    return forwardedProto === 'https'
+  }
+
+  const forwardedSsl = getHeader(event, 'x-forwarded-ssl')?.trim().toLowerCase()
+
+  if (forwardedSsl) {
+    return forwardedSsl === 'on'
+  }
+
+  const cfVisitor = getHeader(event, 'cf-visitor')
+
+  if (cfVisitor) {
+    try {
+      const parsed = JSON.parse(cfVisitor) as { scheme?: string }
+
+      if (parsed.scheme) {
+        return parsed.scheme.toLowerCase() === 'https'
+      }
+    } catch {
+      // ignore malformed proxy metadata
+    }
+  }
+
   const requestUrl = getRequestURL(event)
   return requestUrl.protocol === 'https:'
 }
@@ -133,7 +168,7 @@ export function isSystemAdminUser(
 export function clearAuthCookie(event: H3Event) {
   deleteCookie(event, AUTH_COOKIE_NAME, {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: 'strict',
     secure: shouldUseSecureCookies(event),
     path: '/'
   })
@@ -144,7 +179,7 @@ export function getAuthCookieOptions(event: H3Event) {
 
   return {
     httpOnly: true,
-    sameSite: 'lax' as const,
+    sameSite: 'strict' as const,
     secure: shouldUseSecureCookies(event),
     path: '/',
     maxAge: AUTH_COOKIE_MAX_AGE,
