@@ -20,7 +20,9 @@ export const users = sqliteTable('users', {
   username: text('username').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
   avatarId: text('avatar_id').notNull().default('qq-classic-01'),
-  isSystemAdmin: integer('is_system_admin', { mode: 'boolean' }).notNull().default(false),
+  isSystemAdmin: integer('is_system_admin', { mode: 'boolean' })
+    .notNull()
+    .default(false),
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
   createdAt: integer('created_at')
     .notNull()
@@ -71,7 +73,9 @@ export const documents = sqliteTable(
     title: text('title').notNull(),
     content: text('content').notNull().default(''),
     parentId: integer('parent_id'),
-    isFolder: integer('is_folder', { mode: 'boolean' }).notNull().default(false),
+    isFolder: integer('is_folder', { mode: 'boolean' })
+      .notNull()
+      .default(false),
     version: integer('version').notNull().default(1),
     createdBy: integer('created_by').references(() => users.id, {
       onDelete: 'set null'
@@ -92,8 +96,41 @@ export const documents = sqliteTable(
       foreignColumns: [table.id],
       name: 'documents_parent_id_fk'
     }).onDelete('cascade'),
-    spaceParentIdx: index('documents_space_parent_idx').on(table.spaceId, table.parentId),
-    spaceUpdatedAtIdx: index('documents_space_updated_at_idx').on(table.spaceId, table.updatedAt)
+    spaceParentIdx: index('documents_space_parent_idx').on(
+      table.spaceId,
+      table.parentId
+    ),
+    spaceUpdatedAtIdx: index('documents_space_updated_at_idx').on(
+      table.spaceId,
+      table.updatedAt
+    )
+  })
+)
+
+export const documentShares = sqliteTable(
+  'document_shares',
+  {
+    documentId: integer('document_id')
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    ownerUserId: integer('owner_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    sharedWithUserId: integer('shared_with_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: integer('created_at')
+      .notNull()
+      .default(sql`(unixepoch())`)
+  },
+  (table) => ({
+    pk: primaryKey({
+      columns: [table.documentId, table.sharedWithUserId]
+    }),
+    ownerUserIdx: index('document_shares_owner_user_idx').on(table.ownerUserId),
+    sharedWithUserIdx: index('document_shares_shared_with_user_idx').on(
+      table.sharedWithUserId
+    )
   })
 )
 
@@ -118,8 +155,14 @@ export const auditLogs = sqliteTable(
       .default(sql`(unixepoch())`)
   },
   (table) => ({
-    spaceCreatedAtIdx: index('audit_logs_space_created_at_idx').on(table.spaceId, table.createdAt),
-    userCreatedAtIdx: index('audit_logs_user_created_at_idx').on(table.userId, table.createdAt)
+    spaceCreatedAtIdx: index('audit_logs_space_created_at_idx').on(
+      table.spaceId,
+      table.createdAt
+    ),
+    userCreatedAtIdx: index('audit_logs_user_created_at_idx').on(
+      table.userId,
+      table.createdAt
+    )
   })
 )
 
@@ -131,5 +174,7 @@ export type SpaceMember = typeof spaceMembers.$inferSelect
 export type NewSpaceMember = typeof spaceMembers.$inferInsert
 export type Document = typeof documents.$inferSelect
 export type NewDocument = typeof documents.$inferInsert
+export type DocumentShare = typeof documentShares.$inferSelect
+export type NewDocumentShare = typeof documentShares.$inferInsert
 export type AuditLog = typeof auditLogs.$inferSelect
 export type NewAuditLog = typeof auditLogs.$inferInsert

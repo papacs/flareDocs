@@ -2,6 +2,7 @@
 import type {
   ApiResponse,
   DocumentDetail,
+  DocumentShareListItem,
   DocumentTreeItem,
   SpaceDetail,
   SpaceSummary
@@ -48,6 +49,7 @@ const isMovePanelOpen = ref(false)
 const isExportMenuOpen = ref(false)
 const isActionMenuOpen = ref(false)
 const isDocumentInfoOpen = ref(false)
+const isSharePanelOpen = ref(false)
 const isDeleteConfirmOpen = ref(false)
 const isVoicePanelOpen = ref(false)
 const isFullscreen = ref(false)
@@ -83,6 +85,11 @@ const documentLoadFallbackTimer = ref<ReturnType<typeof setTimeout> | null>(
 const documentLoadToken = ref(0)
 const documentCache = new Map<number, DocumentDetail>()
 const prefetchingDocumentIds = new Set<number>()
+const documentShares = ref<DocumentShareListItem[]>([])
+const shareUsername = ref('')
+const sharePending = ref(false)
+const shareError = ref('')
+const shareMessage = ref('')
 const treeItems = ref<DocumentTreeItem[]>([])
 const loadedTreeParentKeys = ref<string[]>([])
 const treeFullyLoaded = ref(false)
@@ -230,6 +237,14 @@ const canEdit = computed(() => {
   const role = space.value?.myRole
   return role === 'admin' || role === 'editor'
 })
+const canShareDocument = computed(() =>
+  Boolean(
+    selectedDocument.value &&
+    !selectedDocument.value.isFolder &&
+    canEdit.value &&
+    space.value?.isPersonal
+  )
+)
 
 const isFileDocument = computed(() =>
   Boolean(selectedDocument.value && !selectedDocument.value.isFolder)
@@ -1048,8 +1063,13 @@ watch(selectedDocument, (document) => {
   isExportMenuOpen.value = false
   isActionMenuOpen.value = false
   isDocumentInfoOpen.value = false
+  isSharePanelOpen.value = false
   isDeleteConfirmOpen.value = false
   isVoicePanelOpen.value = false
+  shareUsername.value = ''
+  shareError.value = ''
+  shareMessage.value = ''
+  documentShares.value = []
   moveTargetParentId.value = document?.parentId
     ? String(document.parentId)
     : 'root'
@@ -1142,6 +1162,10 @@ function handleWindowKeydown(event: KeyboardEvent) {
     isDocumentInfoOpen.value = false
   }
 
+  if (event.key === 'Escape' && isSharePanelOpen.value) {
+    isSharePanelOpen.value = false
+  }
+
   if (event.key === 'Escape' && isVoicePanelOpen.value) {
     isVoicePanelOpen.value = false
   }
@@ -1209,6 +1233,23 @@ const documentFileSizeLabel = computed(() => {
   const encoder = new TextEncoder()
   return formatFileSize(encoder.encode(document.content ?? '').length)
 })
+
+function readShareApiError(error: unknown) {
+  const apiError = error as {
+    data?: {
+      error?: {
+        message?: string
+      }
+    }
+    message?: string
+  }
+
+  return (
+    apiError.data?.error?.message ??
+    apiError.message ??
+    t('workspace.shareOnlyPersonal')
+  )
+}
 
 function clearAutoSaveTimer() {
   if (!autoSaveTimer.value) {
@@ -1720,6 +1761,119 @@ function openDocumentInfoPanel() {
   isDocumentInfoOpen.value = true
   isActionMenuOpen.value = false
   isExportMenuOpen.value = false
+}
+
+async function loadDocumentShares() {
+  if (!selectedDocument.value || !canShareDocument.value) {
+    documentShares.value = []
+    return
+  }
+
+  const response = await $fetch<
+    ApiResponse<{ shares: DocumentShareListItem[] }>
+  >(`/api/spaces/${spaceId.value}/docs/${selectedDocument.value.id}/shares`, {
+    headers: requestHeaders
+  })
+
+  if (!response.ok) {
+    throw new Error(response.error.message)
+  }
+
+  documentShares.value = response.data.shares
+}
+
+async function openSharePanel() {
+  if (!canShareDocument.value) {
+    shareError.value = t('workspace.shareOnlyPersonal')
+    return
+  }
+
+  isSharePanelOpen.value = true
+  isActionMenuOpen.value = false
+  isExportMenuOpen.value = false
+  shareUsername.value = ''
+  shareError.value = ''
+  shareMessage.value = ''
+
+  try {
+    await loadDocumentShares()
+  } catch (error) {
+    shareError.value = readShareApiError(error)
+  }
+}
+
+async function submitDocumentShare() {
+  if (!selectedDocument.value || sharePending.value) {
+    return
+  }
+
+  const username = shareUsername.value.trim().toLowerCase()
+
+  if (!username) {
+    shareError.value = t('workspace.shareUsername')
+    return
+  }
+
+  sharePending.value = true
+  shareError.value = ''
+  shareMessage.value = ''
+
+  try {
+    const response = await $fetch<
+      ApiResponse<{ shares: DocumentShareListItem[] }>
+    >(`/api/spaces/${spaceId.value}/docs/${selectedDocument.value.id}/shares`, {
+      method: 'POST',
+      body: {
+        username
+      }
+    })
+
+    if (!response.ok) {
+      shareError.value = response.error.message
+      return
+    }
+
+    documentShares.value = response.data.shares
+    shareMessage.value = t('workspace.shareSaved', { username })
+    shareUsername.value = ''
+  } catch (error) {
+    shareError.value = readShareApiError(error)
+  } finally {
+    sharePending.value = false
+  }
+}
+
+async function revokeDocumentShare(sharedWithUserId: number) {
+  if (!selectedDocument.value || sharePending.value) {
+    return
+  }
+
+  sharePending.value = true
+  shareError.value = ''
+  shareMessage.value = ''
+
+  try {
+    const response = await $fetch<
+      ApiResponse<{ shares: DocumentShareListItem[] }>
+    >(
+      `/api/spaces/${spaceId.value}/docs/${selectedDocument.value.id}/shares/${sharedWithUserId}`,
+      {
+        method: 'DELETE',
+        body: {}
+      }
+    )
+
+    if (!response.ok) {
+      shareError.value = response.error.message
+      return
+    }
+
+    documentShares.value = response.data.shares
+  } catch (error) {
+    shareError.value = readShareApiError(error)
+  } finally {
+    sharePending.value = false
+  }
 }
 
 async function saveDocument(options?: {
@@ -2401,6 +2555,16 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
               <WorkspaceIcon name="voice" class="h-4 w-4" />
             </button>
             <button
+              v-if="canShareDocument"
+              type="button"
+              class="fd-action-menu-item"
+              :title="t('workspace.share')"
+              :aria-label="t('workspace.share')"
+              @click="openSharePanel"
+            >
+              <WorkspaceIcon name="share" class="h-4 w-4" />
+            </button>
+            <button
               v-if="isFileDocument"
               type="button"
               class="fd-action-menu-item"
@@ -2559,6 +2723,94 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
               <p class="fd-doc-info-value">
                 {{ documentFileSizeLabel }}
               </p>
+            </div>
+          </div>
+        </div>
+
+        <div
+          v-if="isSharePanelOpen && selectedDocument"
+          class="fd-doc-info-modal-wrap"
+          role="dialog"
+          aria-modal="true"
+          :aria-label="t('workspace.shareDoc')"
+        >
+          <button
+            type="button"
+            class="fd-doc-info-modal-backdrop"
+            :aria-label="t('common.cancel')"
+            @click="isSharePanelOpen = false"
+          />
+          <div class="fd-doc-info-modal">
+            <div class="fd-doc-info-modal-head">
+              <h3>{{ t('workspace.shareDoc') }}</h3>
+              <button
+                type="button"
+                class="fd-icon-button"
+                :aria-label="t('common.cancel')"
+                :title="t('common.cancel')"
+                @click="isSharePanelOpen = false"
+              >
+                <WorkspaceIcon name="close" class="h-4 w-4" />
+              </button>
+            </div>
+            <p class="mt-3 text-sm leading-6 text-slate-500">
+              {{ t('workspace.shareDocSummary') }}
+            </p>
+            <form
+              class="mt-4 flex flex-col gap-3 sm:flex-row"
+              @submit.prevent="submitDocumentShare"
+            >
+              <UInput
+                v-model="shareUsername"
+                class="flex-1"
+                size="lg"
+                :placeholder="t('workspace.shareUsername')"
+              />
+              <UButton type="submit" color="neutral" :loading="sharePending">
+                {{ t('workspace.shareSubmit') }}
+              </UButton>
+            </form>
+            <p v-if="shareError" class="mt-3 text-sm text-rose-600">
+              {{ shareError }}
+            </p>
+            <p v-if="shareMessage" class="mt-3 text-sm text-emerald-700">
+              {{ shareMessage }}
+            </p>
+            <div class="mt-5 space-y-2">
+              <p
+                class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"
+              >
+                {{ t('workspace.shareListTitle') }}
+              </p>
+              <div
+                v-if="documentShares.length === 0"
+                class="rounded-xl border border-dashed border-[rgba(31,41,55,0.14)] px-4 py-4 text-sm text-slate-500"
+              >
+                {{ t('workspace.shareEmpty') }}
+              </div>
+              <div
+                v-for="shareItem in documentShares"
+                :key="`share-user-${shareItem.sharedWith.id}`"
+                class="flex items-center justify-between gap-3 rounded-xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.72)] px-4 py-3"
+              >
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-medium text-slate-800">
+                    {{ shareItem.sharedWith.username }}
+                  </p>
+                  <p class="text-xs text-slate-500">
+                    {{ formatTimestamp(shareItem.createdAt) }}
+                  </p>
+                </div>
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  size="sm"
+                  :disabled="sharePending"
+                  @click="revokeDocumentShare(shareItem.sharedWith.id)"
+                >
+                  {{ t('workspace.shareRevoke') }}
+                </UButton>
+              </div>
             </div>
           </div>
         </div>

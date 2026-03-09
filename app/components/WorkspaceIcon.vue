@@ -24,8 +24,9 @@ defineProps<{
     | 'pdf'
     | 'plus-file'
     | 'plus-folder'
-    | 'settings'
     | 'save'
+    | 'settings'
+    | 'share'
     | 'logout'
     | 'users'
     | 'voice'
@@ -431,6 +432,23 @@ defineProps<{
     <path d="M4.8 18.2a4.2 4.2 0 0 1 8.4 0" />
     <circle cx="16.6" cy="9.4" r="2.2" />
     <path d="M14.8 18.2a3.6 3.6 0 0 1 4.4-3.5 3.6 3.6 0 0 1 0 3.5" />
+  </svg>
+
+  <svg
+    v-else-if="name === 'share'"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <circle cx="6" cy="12" r="2.25" />
+    <circle cx="18" cy="6" r="2.25" />
+    <circle cx="18" cy="18" r="2.25" />
+    <path d="M8 11l7.6-4" />
+    <path d="m8 13 7.6 4" />
   </svg>
 
   <svg

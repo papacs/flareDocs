@@ -47,6 +47,7 @@ function buildPersonalWorkspaceName(username: string) {
 
 export function isPersonalWorkspace(
   space: {
+    name?: string
     createdBy: number | null
     slug: string
     visibility: SpaceVisibility
@@ -57,10 +58,16 @@ export function isPersonalWorkspace(
     return false
   }
 
+  const normalizedName = space.name?.trim() ?? ''
+  const nextPersonalName = buildPersonalWorkspaceName(user.username)
+  const legacyPersonalName = buildLegacyPersonalWorkspaceName(user.username)
+
   return (
     space.visibility === 'private' &&
     space.createdBy === user.id &&
-    space.slug === buildPersonalWorkspaceSlug(user.username)
+    (space.slug === buildPersonalWorkspaceSlug(user.username) ||
+      normalizedName === nextPersonalName ||
+      normalizedName === legacyPersonalName)
   )
 }
 

@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import type { ApiResponse, AuthUser, SpaceSummary } from '../types/api'
+import type {
+  ApiResponse,
+  AuthUser,
+  SharedDocumentListItem,
+  SpaceSummary
+} from '../types/api'
 import type { AppearanceMode } from '../composables/useAppearance'
 import {
   avatarPresetIds,
@@ -30,6 +35,12 @@ const unauthenticatedUserResponse: ApiResponse<{ user: AuthUser }> = {
     message: 'Not authenticated.'
   }
 }
+const emptySharesResponse: ApiResponse<{ shares: SharedDocumentListItem[] }> = {
+  ok: true,
+  data: {
+    shares: []
+  }
+}
 
 const { data: meResponse, refresh: refreshMe } = await useAsyncData(
   'auth-me',
@@ -47,6 +58,24 @@ const {
   $fetch<ApiResponse<{ spaces: SpaceSummary[] }>>('/api/spaces', {
     headers: cookieHeaders
   })
+)
+const { data: sharedResponse, refresh: refreshShared } = await useAsyncData(
+  'shares-index',
+  () => {
+    if (!meResponse.value?.ok) {
+      return emptySharesResponse
+    }
+
+    return $fetch<ApiResponse<{ shares: SharedDocumentListItem[] }>>(
+      '/api/shares',
+      {
+        headers: cookieHeaders
+      }
+    ).catch(() => emptySharesResponse)
+  },
+  {
+    default: () => emptySharesResponse
+  }
 )
 
 const currentUser = computed(() =>
@@ -75,6 +104,12 @@ const preferredWorkspace = computed(() => {
 const publicSpacesCount = computed(
   () => spaces.value.filter((space) => space.visibility === 'public').length
 )
+const sharedDocuments = computed(() =>
+  sharedResponse.value && sharedResponse.value.ok
+    ? sharedResponse.value.data.shares
+    : []
+)
+const sharedDocumentsPreview = computed(() => sharedDocuments.value.slice(0, 3))
 const teamSpacesCount = computed(
   () => spaces.value.filter((space) => space.visibility === 'team').length
 )
@@ -290,6 +325,10 @@ function resolveAvatarToneClass(avatarId: string) {
   return avatarToneClasses[safeIndex % avatarToneClasses.length]
 }
 
+function formatDate(value: number) {
+  return new Date(value * 1000).toLocaleString()
+}
+
 function readApiErrorMessage(payload: unknown) {
   if (!payload || typeof payload !== 'object') {
     return null
@@ -502,7 +541,7 @@ async function logout() {
       method: 'POST',
       body: {}
     })
-    await Promise.all([refreshMe(), refreshSpaces()])
+    await Promise.all([refreshMe(), refreshSpaces(), refreshShared()])
   } finally {
     logoutPending.value = false
   }
@@ -1227,6 +1266,87 @@ async function saveProfile() {
           {{ t('index.noSpacesHint') }}
         </p>
       </article>
+    </section>
+
+    <section
+      v-if="currentUser"
+      class="rounded-[1.8rem] border border-[rgba(31,41,55,0.1)] bg-[linear-gradient(180deg,rgba(255,252,247,0.94),rgba(248,243,235,0.84))] p-5 shadow-[0_18px_40px_rgba(120,98,69,0.1)]"
+    >
+      <div
+        class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
+      >
+        <div>
+          <p
+            class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700"
+          >
+            {{ t('index.sharedWithMe') }}
+          </p>
+          <h2 class="mt-2 text-2xl font-semibold text-slate-800">
+            {{ t('index.sharedWithMe') }}
+          </h2>
+          <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+            {{ t('index.sharedWithMeSummary') }}
+          </p>
+        </div>
+        <NuxtLink
+          to="/shared"
+          class="inline-flex items-center gap-2 rounded-full border border-[rgba(31,41,55,0.12)] bg-[rgba(255,255,255,0.72)] px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-[rgba(31,41,55,0.2)] hover:bg-white"
+        >
+          <WorkspaceIcon name="share" class="h-4 w-4" />
+          {{ t('index.viewAllShares') }}
+        </NuxtLink>
+      </div>
+
+      <div
+        v-if="sharedDocumentsPreview.length"
+        class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3"
+      >
+        <article
+          v-for="sharedDocument in sharedDocumentsPreview"
+          :key="`shared-preview-${sharedDocument.documentId}`"
+          class="rounded-[1.45rem] border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.76)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p
+                class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"
+              >
+                {{
+                  t('index.sharedBy', {
+                    username: sharedDocument.owner.username
+                  })
+                }}
+              </p>
+              <h3 class="mt-2 truncate text-lg font-semibold text-slate-800">
+                {{ sharedDocument.title }}
+              </h3>
+              <p class="mt-1 text-sm text-slate-500">
+                {{
+                  t('index.sharedWorkspace', { name: sharedDocument.spaceName })
+                }}
+              </p>
+            </div>
+            <NuxtLink
+              :to="`/shared/${sharedDocument.documentId}`"
+              class="fd-space-card-icon-action"
+              :title="t('index.openSharedDocument')"
+              :aria-label="t('index.openSharedDocument')"
+            >
+              <WorkspaceIcon name="chevron" class="h-4 w-4" />
+            </NuxtLink>
+          </div>
+          <p class="mt-4 text-xs text-slate-400">
+            {{ formatDate(sharedDocument.updatedAt) }}
+          </p>
+        </article>
+      </div>
+
+      <div
+        v-else
+        class="mt-5 rounded-[1.45rem] border border-dashed border-[rgba(31,41,55,0.16)] bg-[rgba(255,255,255,0.6)] px-4 py-6 text-sm leading-6 text-slate-500"
+      >
+        {{ t('index.noSharedDocuments') }}
+      </div>
     </section>
 
     <div

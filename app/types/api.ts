@@ -69,6 +69,43 @@ export type DocumentDetail = {
   updatedByName: string | null
 }
 
+export type DocumentShareUser = {
+  id: number
+  username: string
+  avatarId: string
+  createdAt: number
+}
+
+export type DocumentShareListItem = {
+  documentId: number
+  sharedWith: DocumentShareUser
+  createdAt: number
+}
+
+export type SharedDocumentListItem = {
+  documentId: number
+  owner: DocumentShareUser
+  spaceId: number
+  spaceName: string
+  title: string
+  isFolder: boolean
+  updatedAt: number
+  shareCreatedAt: number
+}
+
+export type SharedDocumentDetail = {
+  document: DocumentDetail
+  owner: DocumentShareUser
+  space: {
+    id: number
+    name: string
+  }
+  path: Array<{
+    id: number
+    title: string
+  }>
+}
+
 export type AuditLogItem = {
   id: number
   action: string

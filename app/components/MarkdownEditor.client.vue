@@ -1,21 +1,9 @@
 <script setup lang="ts">
-import type { DefineComponent } from 'vue'
 import type { BytemdPlugin } from 'bytemd'
-import { defineAsyncComponent } from 'vue'
 import gfm from '@bytemd/plugin-gfm'
+import { Editor as ByteMdEditor } from '@bytemd/vue-next'
 import { renderMarkdown } from '../utils/renderMarkdown'
 import 'bytemd/dist/index.css'
-
-const ByteMdEditor = defineAsyncComponent(async () => {
-  const module = (await import('@bytemd/vue-next')) as unknown as {
-    Editor?: DefineComponent
-    default?: {
-      Editor?: DefineComponent
-    }
-  }
-
-  return (module.Editor ?? module.default?.Editor) as DefineComponent
-})
 
 const props = defineProps<{
   modelValue: string

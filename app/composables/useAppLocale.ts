@@ -122,7 +122,16 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'index.quickGuideStepCreateDoc': '进入空间后在左侧目录创建目录或文档。',
     'index.quickGuideStepEdit':
       '打开编辑模式直接输入，支持表格、公式和语音追加。',
-    'index.quickGuideStepShare': '需要协作时把空间改为团队并添加成员。',
+    'index.quickGuideStepShare':
+      '单篇先用文档分享给指定用户，长期共建资料再放进团队工作区。',
+    'index.sharedWithMe': '分享给我',
+    'index.sharedWithMeSummary':
+      '别人从个人工作区定向分享给你的文档，会集中出现在这里。',
+    'index.viewAllShares': '查看全部分享',
+    'index.noSharedDocuments': '目前还没有文档分享给你。',
+    'index.sharedBy': ({ username }) => `来自 ${username}`,
+    'index.sharedWorkspace': ({ name }) => `来源：${name}`,
+    'index.openSharedDocument': '查看分享',
     'index.spaceNameRule': '空间名称需要 2 到 64 个字符。',
     'index.invalidSpaceName': '请输入 2 到 64 个字符的空间名称。',
     'index.createSpaceFailed': '创建空间失败，请稍后重试。',
@@ -232,6 +241,32 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
       '当前页面不是安全上下文，麦克风不可用。请使用 localhost 或 HTTPS 访问。',
     'workspace.voiceErrorGeneric': '语音识别失败，请重试。',
     'workspace.pickDocument': '从左侧树中选择一个文档开始阅读或编辑。',
+    'workspace.share': '分享',
+    'workspace.shareDoc': '分享文档',
+    'workspace.shareDocSummary':
+      '把这篇个人文档只读分享给指定用户。被分享人会在首页“分享给我”里直接看到它。',
+    'workspace.shareUsername': '输入要分享给的用户名',
+    'workspace.shareSubmit': '添加分享',
+    'workspace.shareEmpty': '这篇文档暂时还没有分享给任何人。',
+    'workspace.shareRevoke': '取消分享',
+    'workspace.shareSaved': ({ username }) => `已分享给 ${username}。`,
+    'workspace.shareListTitle': '已分享给',
+    'workspace.shareOnlyPersonal': '只有个人工作区中的文档支持直接定向分享。',
+    'workspace.sharedReadOnly':
+      '这是别人分享给你的只读文档。若需要长期多人协作，建议迁移到团队工作区。',
+    'shared.title': '分享给我的文档',
+    'shared.summary':
+      '这里集中展示别人从个人工作区定向分享给你的文档，手机和桌面端都可以直接阅读。',
+    'shared.backHome': '返回主页',
+    'shared.empty': '目前还没有收到任何文档分享。',
+    'shared.open': '打开文档',
+    'shared.fromOwner': ({ username }) => `分享人：${username}`,
+    'shared.fromWorkspace': ({ name }) => `来源工作区：${name}`,
+    'shared.detailBack': '返回分享列表',
+    'shared.detailMeta': ({ username, name }) => `${username} · ${name}`,
+    'shared.detailReadonly': '只读分享',
+    'shared.detailHint':
+      '这是一篇来自个人工作区的定向分享文档，你可以直接在手机或桌面端阅读。',
     'audit.kicker': '审计',
     'audit.activity': ({ name }) => `${name} 活动记录`,
     'audit.back': '返回工作区',
@@ -418,7 +453,15 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'index.quickGuideStepEdit':
       'Edit directly with Markdown visuals, tables, formulas, and voice append.',
     'index.quickGuideStepShare':
-      'Switch to team visibility and add members when you need collaboration.',
+      'Share a single document first; move long-lived collaborative content into a team workspace.',
+    'index.sharedWithMe': 'Shared With Me',
+    'index.sharedWithMeSummary':
+      'Documents someone shared with you from their personal workspace appear here.',
+    'index.viewAllShares': 'View All Shared Docs',
+    'index.noSharedDocuments': 'Nothing has been shared with you yet.',
+    'index.sharedBy': ({ username }) => `From ${username}`,
+    'index.sharedWorkspace': ({ name }) => `Source: ${name}`,
+    'index.openSharedDocument': 'Open Share',
     'index.spaceNameRule': 'Space names must be between 2 and 64 characters.',
     'index.invalidSpaceName': 'Enter a space name between 2 and 64 characters.',
     'index.createSpaceFailed': 'Unable to create the space right now.',
@@ -537,6 +580,34 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'workspace.voiceErrorGeneric': 'Speech recognition failed. Please retry.',
     'workspace.pickDocument':
       'Pick a document from the tree to start reading or editing.',
+    'workspace.share': 'Share',
+    'workspace.shareDoc': 'Share Document',
+    'workspace.shareDocSummary':
+      'Give a specific user read-only access to this personal document. They will see it in "Shared With Me" on the home page.',
+    'workspace.shareUsername': 'Enter a username to share with',
+    'workspace.shareSubmit': 'Add Share',
+    'workspace.shareEmpty':
+      'This document has not been shared with anyone yet.',
+    'workspace.shareRevoke': 'Revoke Share',
+    'workspace.shareSaved': ({ username }) => `Shared with ${username}.`,
+    'workspace.shareListTitle': 'Shared With',
+    'workspace.shareOnlyPersonal':
+      'Direct document sharing is only available in personal workspaces.',
+    'workspace.sharedReadOnly':
+      'This is a read-only document shared with you. Move long-lived collaborative content into a team workspace.',
+    'shared.title': 'Shared With Me',
+    'shared.summary':
+      'Documents people shared with you from their personal workspaces are collected here for quick reading on desktop and mobile.',
+    'shared.backHome': 'Back Home',
+    'shared.empty': 'Nothing has been shared with you yet.',
+    'shared.open': 'Open Document',
+    'shared.fromOwner': ({ username }) => `Shared by: ${username}`,
+    'shared.fromWorkspace': ({ name }) => `Workspace: ${name}`,
+    'shared.detailBack': 'Back To Shared Docs',
+    'shared.detailMeta': ({ username, name }) => `${username} · ${name}`,
+    'shared.detailReadonly': 'Read-only Share',
+    'shared.detailHint':
+      'This is a directly shared personal document. You can read it comfortably on mobile or desktop.',
     'audit.kicker': 'Audit',
     'audit.activity': ({ name }) => `${name} activity`,
     'audit.back': 'Back To Workspace',
