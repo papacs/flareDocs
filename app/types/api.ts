@@ -93,6 +93,18 @@ export type SharedDocumentListItem = {
   shareCreatedAt: number
 }
 
+export type OwnedSharedDocumentListItem = {
+  documentId: number
+  spaceId: number
+  spaceName: string
+  title: string
+  isFolder: boolean
+  updatedAt: number
+  lastSharedAt: number
+  shareCount: number
+  recipients: DocumentShareUser[]
+}
+
 export type SharedDocumentDetail = {
   document: DocumentDetail
   owner: DocumentShareUser

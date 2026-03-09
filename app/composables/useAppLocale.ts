@@ -161,7 +161,24 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'workspace.audit': '审计日志',
     'workspace.tree': '树结构',
     'workspace.documents': '文档',
+    'workspace.sharedWithMe': '分享给我',
+    'workspace.myShares': '我分享的',
     'workspace.treeHint': '支持多级目录，点击目录前的按钮可展开或收起。',
+    'workspace.pickSharedDocument': '从左侧列表中选择一篇分享文档查看。',
+    'workspace.sharedReadonlyHint': '分享文档在这里统一只读查看，移动端和桌面端使用同一套布局。',
+    'workspace.sharedLoading': '正在加载分享文档...',
+    'workspace.sharedLoadFailed': '分享文档加载失败，请稍后重试。',
+    'workspace.sharedWithMeEmpty': '目前还没有收到任何分享文档。',
+    'workspace.mySharesEmpty': '你还没有分享过任何文档。',
+    'workspace.sharedByWorkspace': ({ username, name }) =>
+      `${username} · ${name}`,
+    'workspace.mySharesListMeta': ({ count, name }) =>
+      `${name} · 已分享 ${count} 人`,
+    'workspace.sharedFromMeta': ({ username, name }) =>
+      `来自 ${username} · ${name}`,
+    'workspace.mySharesReadonlyMeta': ({ name }) => `你的个人文档 · ${name}`,
+    'workspace.mySharesMeta': ({ count, updatedAt }) =>
+      `最近更新 ${updatedAt} · 已分享 ${count} 人`,
     'workspace.currentPath': '当前路径',
     'workspace.expandAll': '展开全部',
     'workspace.collapseAll': '收起全部',
@@ -249,6 +266,7 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'workspace.shareSubmit': '添加分享',
     'workspace.shareEmpty': '这篇文档暂时还没有分享给任何人。',
     'workspace.shareRevoke': '取消分享',
+    'workspace.shareRevoked': ({ username }) => `已取消对 ${username} 的分享。`,
     'workspace.shareSaved': ({ username }) => `已分享给 ${username}。`,
     'workspace.shareListTitle': '已分享给',
     'workspace.shareOnlyPersonal': '只有个人工作区中的文档支持直接定向分享。',
@@ -491,8 +509,29 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'workspace.audit': 'Audit',
     'workspace.tree': 'Tree',
     'workspace.documents': 'Documents',
+    'workspace.sharedWithMe': 'Shared With Me',
+    'workspace.myShares': 'My Shares',
     'workspace.treeHint':
       'Multi-level folders are supported. Use the control before a folder to expand or collapse it.',
+    'workspace.pickSharedDocument':
+      'Choose a shared document from the left list to read it here.',
+    'workspace.sharedReadonlyHint':
+      'Shared documents are read in one unified layout across desktop and mobile.',
+    'workspace.sharedLoading': 'Loading shared document...',
+    'workspace.sharedLoadFailed':
+      'Unable to load the shared document right now.',
+    'workspace.sharedWithMeEmpty': 'Nothing has been shared with you yet.',
+    'workspace.mySharesEmpty': 'You have not shared any documents yet.',
+    'workspace.sharedByWorkspace': ({ username, name }) =>
+      `${username} · ${name}`,
+    'workspace.mySharesListMeta': ({ count, name }) =>
+      `${name} · Shared with ${count}`,
+    'workspace.sharedFromMeta': ({ username, name }) =>
+      `From ${username} · ${name}`,
+    'workspace.mySharesReadonlyMeta': ({ name }) =>
+      `Your personal document · ${name}`,
+    'workspace.mySharesMeta': ({ count, updatedAt }) =>
+      `Updated ${updatedAt} · Shared with ${count}`,
     'workspace.currentPath': 'Current path',
     'workspace.expandAll': 'Expand all',
     'workspace.collapseAll': 'Collapse all',
@@ -589,6 +628,8 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'workspace.shareEmpty':
       'This document has not been shared with anyone yet.',
     'workspace.shareRevoke': 'Revoke Share',
+    'workspace.shareRevoked': ({ username }) =>
+      `Share revoked for ${username}.`,
     'workspace.shareSaved': ({ username }) => `Shared with ${username}.`,
     'workspace.shareListTitle': 'Shared With',
     'workspace.shareOnlyPersonal':

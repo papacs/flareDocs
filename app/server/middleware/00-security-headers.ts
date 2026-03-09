@@ -13,7 +13,9 @@ const BASE_CSP = [
 ].join('; ')
 
 export default defineEventHandler((event) => {
-  setHeader(event, 'Content-Security-Policy', BASE_CSP)
+  if (!import.meta.dev) {
+    setHeader(event, 'Content-Security-Policy', BASE_CSP)
+  }
   setHeader(event, 'Referrer-Policy', 'strict-origin-when-cross-origin')
   setHeader(event, 'X-Content-Type-Options', 'nosniff')
   setHeader(event, 'X-Frame-Options', 'DENY')

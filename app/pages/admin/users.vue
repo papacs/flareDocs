@@ -140,6 +140,10 @@ watch(
 )
 
 async function createUser() {
+  if (createPending.value) {
+    return
+  }
+
   createPending.value = true
   createError.value = ''
   createSuccess.value = ''
@@ -420,9 +424,13 @@ async function deleteUser(userItem: AdminUser) {
             {{ createSuccess }}
           </p>
 
-          <UButton type="submit" color="neutral" :loading="createPending">{{
-            t('adminUsers.createSubmit')
-          }}</UButton>
+          <UButton
+            type="submit"
+            color="neutral"
+            :loading="createPending"
+            @click="createUser"
+            >{{ t('adminUsers.createSubmit') }}</UButton
+          >
         </form>
       </article>
 

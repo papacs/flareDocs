@@ -4,6 +4,9 @@ import type {
   DocumentDetail,
   DocumentShareListItem,
   DocumentTreeItem,
+  OwnedSharedDocumentListItem,
+  SharedDocumentDetail,
+  SharedDocumentListItem,
   SpaceDetail,
   SpaceSummary
 } from '../../types/api'
@@ -21,6 +24,8 @@ type MoveOption = {
   value: string
 }
 
+type WorkspaceView = 'docs' | 'shared-with-me' | 'my-shares'
+
 const { t } = useAppLocale()
 const route = useRoute()
 const router = useRouter()
@@ -33,7 +38,11 @@ const mobileTreeRestoreStorageKey = 'fd-mobile-tree-open-once'
 const spaceId = computed(() => Number(route.params.spaceId))
 const treeStorageKey = computed(() => `fd-tree-expanded:${spaceId.value}`)
 const selectedDocumentId = ref<number | null>(
-  route.query.doc ? Number(route.query.doc) : null
+  parsePositiveQueryNumber(route.query.doc)
+)
+const workspaceView = ref<WorkspaceView>(parseWorkspaceViewFromQuery(route.query.view))
+const selectedSharedDocumentId = ref<number | null>(
+  parsePositiveQueryNumber(route.query.shareDoc)
 )
 
 const createNodeMode = ref<'doc' | 'folder' | null>(null)
@@ -84,12 +93,16 @@ const documentLoadFallbackTimer = ref<ReturnType<typeof setTimeout> | null>(
 )
 const documentLoadToken = ref(0)
 const documentCache = new Map<number, DocumentDetail>()
+const sharedDocumentCache = new Map<number, SharedDocumentDetail>()
 const prefetchingDocumentIds = new Set<number>()
 const documentShares = ref<DocumentShareListItem[]>([])
+const sharedDocumentDetail = ref<SharedDocumentDetail | null>(null)
 const shareUsername = ref('')
 const sharePending = ref(false)
 const shareError = ref('')
 const shareMessage = ref('')
+const sharedDocumentError = ref('')
+const sharedDocumentPending = ref(false)
 const treeItems = ref<DocumentTreeItem[]>([])
 const loadedTreeParentKeys = ref<string[]>([])
 const treeFullyLoaded = ref(false)
@@ -202,6 +215,52 @@ const { data: spacesResponse, refresh: refreshSpaces } = await useAsyncData(
   }
 )
 
+const emptySharedDocumentsResponse: ApiResponse<{ shares: SharedDocumentListItem[] }> =
+  {
+    ok: true,
+    data: {
+      shares: []
+    }
+  }
+
+const emptyOwnedSharedDocumentsResponse: ApiResponse<{
+  shares: OwnedSharedDocumentListItem[]
+}> = {
+  ok: true,
+  data: {
+    shares: []
+  }
+}
+
+const {
+  data: sharedWithMeResponse,
+  refresh: refreshSharedWithMe
+} = await useAsyncData(
+  'workspace-shared-with-me',
+  () =>
+    $fetch<ApiResponse<{ shares: SharedDocumentListItem[] }>>('/api/shares', {
+      headers: requestHeaders
+    }).catch(() => emptySharedDocumentsResponse),
+  {
+    default: () => emptySharedDocumentsResponse
+  }
+)
+
+const { data: mySharedDocumentsResponse, refresh: refreshMySharedDocuments } =
+  await useAsyncData(
+    'workspace-my-shares',
+    () =>
+      $fetch<ApiResponse<{ shares: OwnedSharedDocumentListItem[] }>>(
+        '/api/shares/owned',
+        {
+          headers: requestHeaders
+        }
+      ).catch(() => emptyOwnedSharedDocumentsResponse),
+    {
+      default: () => emptyOwnedSharedDocumentsResponse
+    }
+  )
+
 const { data: rootTreeResponse, refresh: refreshRootTree } = await useAsyncData(
   () => `workspace-tree-${spaceId.value}`,
   () =>
@@ -221,6 +280,16 @@ const space = computed(() =>
 const spaces = computed(() =>
   spacesResponse.value && spacesResponse.value.ok
     ? spacesResponse.value.data.spaces
+    : []
+)
+const sharedWithMeDocuments = computed(() =>
+  sharedWithMeResponse.value && sharedWithMeResponse.value.ok
+    ? sharedWithMeResponse.value.data.shares
+    : []
+)
+const mySharedDocuments = computed(() =>
+  mySharedDocumentsResponse.value && mySharedDocumentsResponse.value.ok
+    ? mySharedDocumentsResponse.value.data.shares
     : []
 )
 const treeItemMap = computed(
@@ -244,6 +313,47 @@ const canShareDocument = computed(() =>
     canEdit.value &&
     space.value?.isPersonal
   )
+)
+const isSharedView = computed(() => workspaceView.value !== 'docs')
+const activeSharedDocuments = computed(() =>
+  workspaceView.value === 'shared-with-me'
+    ? sharedWithMeDocuments.value
+    : workspaceView.value === 'my-shares'
+      ? mySharedDocuments.value
+      : []
+)
+const activeSharedSidebarItems = computed(() => {
+  if (workspaceView.value === 'shared-with-me') {
+    return sharedWithMeDocuments.value.map((item) => ({
+      documentId: item.documentId,
+      title: item.title,
+      subtitle: t('workspace.sharedByWorkspace', {
+        username: item.owner.username,
+        name: item.spaceName
+      }),
+      timestamp: item.shareCreatedAt
+    }))
+  }
+
+  if (workspaceView.value === 'my-shares') {
+    return mySharedDocuments.value.map((item) => ({
+      documentId: item.documentId,
+      title: item.title,
+      subtitle: t('workspace.mySharesListMeta', {
+        count: item.shareCount,
+        name: item.spaceName
+      }),
+      timestamp: item.lastSharedAt
+    }))
+  }
+
+  return []
+})
+const selectedMySharedDocument = computed(
+  () =>
+    mySharedDocuments.value.find(
+      (document) => document.documentId === selectedSharedDocumentId.value
+    ) ?? null
 )
 
 const isFileDocument = computed(() =>
@@ -396,6 +506,108 @@ const currentWorkspaceName = computed(
     workspaceOptions.value.find((workspace) => workspace.id === spaceId.value)
       ?.name ?? ''
 )
+
+function parseWorkspaceViewFromQuery(value: unknown): WorkspaceView {
+  return value === 'shared-with-me' || value === 'my-shares' ? value : 'docs'
+}
+
+function parsePositiveQueryNumber(value: unknown) {
+  const normalizedValue = Array.isArray(value) ? value[0] : value
+  const parsedValue = Number(normalizedValue)
+  return Number.isInteger(parsedValue) && parsedValue > 0 ? parsedValue : null
+}
+
+async function syncWorkspaceQuery() {
+  if (!import.meta.client) {
+    return
+  }
+
+  const nextQuery = { ...route.query }
+
+  if (selectedDocumentId.value) {
+    nextQuery.doc = String(selectedDocumentId.value)
+  } else {
+    delete nextQuery.doc
+  }
+
+  if (workspaceView.value === 'docs') {
+    delete nextQuery.view
+    delete nextQuery.shareDoc
+  } else {
+    nextQuery.view = workspaceView.value
+
+    if (selectedSharedDocumentId.value) {
+      nextQuery.shareDoc = String(selectedSharedDocumentId.value)
+    } else {
+      delete nextQuery.shareDoc
+    }
+  }
+
+  await router.replace({ query: nextQuery })
+}
+
+function setWorkspaceView(nextView: WorkspaceView) {
+  if (workspaceView.value === nextView) {
+    return
+  }
+
+  workspaceView.value = nextView
+  isActionMenuOpen.value = false
+  isExportMenuOpen.value = false
+  isMovePanelOpen.value = false
+  isDocumentInfoOpen.value = false
+  isSharePanelOpen.value = false
+  isVoicePanelOpen.value = false
+  isEditing.value = false
+  isRenaming.value = false
+  if (speechListening.value) {
+    stopSpeechRecognition()
+  }
+
+  if (nextView === 'shared-with-me') {
+    void refreshSharedWithMe()
+  }
+
+  if (nextView === 'my-shares') {
+    void refreshMySharedDocuments()
+  }
+
+  void syncWorkspaceQuery()
+}
+
+function selectSharedDocument(documentId: number) {
+  if (!documentId) {
+    return
+  }
+
+  selectedSharedDocumentId.value = documentId
+  isMobileTreeOpen.value = false
+  isActionMenuOpen.value = false
+  void syncWorkspaceQuery()
+}
+
+function openOwnedSharePanel() {
+  if (workspaceView.value !== 'my-shares' || !sharedDocumentDetail.value) {
+    return
+  }
+
+  isSharePanelOpen.value = true
+  isActionMenuOpen.value = false
+  shareError.value = ''
+  shareMessage.value = ''
+}
+
+const workspaceTreeTitle = computed(() => {
+  if (workspaceView.value === 'shared-with-me') {
+    return t('workspace.sharedWithMe')
+  }
+
+  if (workspaceView.value === 'my-shares') {
+    return t('workspace.myShares')
+  }
+
+  return t('workspace.documents')
+})
 
 async function selectWorkspace(nextSpaceId: number) {
   isSpaceMenuOpen.value = false
@@ -913,7 +1125,10 @@ watch(
     treeLoadProgress.value = 0
     treeLoadLabel.value = ''
     documentCache.clear()
+    sharedDocumentCache.clear()
     prefetchingDocumentIds.clear()
+    sharedDocumentDetail.value = null
+    sharedDocumentError.value = ''
     restoreExpandedFolders()
   },
   { immediate: true }
@@ -984,6 +1199,28 @@ watch(isSpaceMenuOpen, async (open) => {
 })
 
 watch(
+  () => route.query.view,
+  (value) => {
+    const nextView = parseWorkspaceViewFromQuery(value)
+
+    if (workspaceView.value !== nextView) {
+      workspaceView.value = nextView
+    }
+  }
+)
+
+watch(
+  () => route.query.shareDoc,
+  (value) => {
+    const nextDocumentId = parsePositiveQueryNumber(value)
+
+    if (selectedSharedDocumentId.value !== nextDocumentId) {
+      selectedSharedDocumentId.value = nextDocumentId
+    }
+  }
+)
+
+watch(
   treeItems,
   async (documents) => {
     if (!documents.length) {
@@ -1033,18 +1270,7 @@ watch(selectedDocumentId, async (documentId) => {
   conflictMessage.value = ''
   clearAutoSaveTimer()
   isActionMenuOpen.value = false
-
-  if (import.meta.client) {
-    const nextQuery = { ...route.query }
-
-    if (documentId) {
-      nextQuery.doc = String(documentId)
-    } else {
-      delete nextQuery.doc
-    }
-
-    await router.replace({ query: nextQuery })
-  }
+  void syncWorkspaceQuery()
 
   await loadDocument(documentId)
   isEditing.value = false
@@ -1058,21 +1284,45 @@ watch(selectedDocumentId, async (documentId) => {
   })
 })
 
-watch(selectedDocument, (document) => {
-  isMovePanelOpen.value = false
-  isExportMenuOpen.value = false
-  isActionMenuOpen.value = false
-  isDocumentInfoOpen.value = false
-  isSharePanelOpen.value = false
-  isDeleteConfirmOpen.value = false
-  isVoicePanelOpen.value = false
-  shareUsername.value = ''
-  shareError.value = ''
-  shareMessage.value = ''
-  documentShares.value = []
-  moveTargetParentId.value = document?.parentId
-    ? String(document.parentId)
-    : 'root'
+watch(workspaceView, async (view) => {
+  conflictMessage.value = ''
+  sharedDocumentError.value = ''
+
+  if (view === 'docs') {
+    sharedDocumentDetail.value = null
+    void syncWorkspaceQuery()
+    return
+  }
+
+  if (!selectedSharedDocumentId.value && activeSharedDocuments.value.length > 0) {
+    selectedSharedDocumentId.value = activeSharedDocuments.value[0]?.documentId ?? null
+  }
+
+  void syncWorkspaceQuery()
+})
+
+watch(activeSharedDocuments, (documents) => {
+  if (workspaceView.value === 'docs') {
+    return
+  }
+
+  if (
+    selectedSharedDocumentId.value &&
+    documents.some((document) => document.documentId === selectedSharedDocumentId.value)
+  ) {
+    return
+  }
+
+  selectedSharedDocumentId.value = documents[0]?.documentId ?? null
+})
+
+watch(selectedSharedDocumentId, async (documentId) => {
+  if (workspaceView.value === 'docs') {
+    return
+  }
+
+  void syncWorkspaceQuery()
+  await loadSharedDocumentDetail(documentId)
   nextTick(() => {
     if (documentScrollRef.value) {
       documentScrollRef.value.scrollTop = 0
@@ -1082,19 +1332,35 @@ watch(selectedDocument, (document) => {
 })
 
 watch(
-  [() => draft.title, () => draft.content, isEditing, selectedDocumentId],
+  () => selectedDocument.value?.id ?? null,
   () => {
-    scheduleAutoSave()
-  }
+    const document = selectedDocument.value
+    isMovePanelOpen.value = false
+    isExportMenuOpen.value = false
+    isActionMenuOpen.value = false
+    isDocumentInfoOpen.value = false
+    isSharePanelOpen.value = false
+    isDeleteConfirmOpen.value = false
+    shareUsername.value = ''
+    shareError.value = ''
+    shareMessage.value = ''
+    documentShares.value = []
+    moveTargetParentId.value = document?.parentId
+      ? String(document.parentId)
+      : 'root'
+    nextTick(() => {
+      if (documentScrollRef.value) {
+        documentScrollRef.value.scrollTop = 0
+      }
+      updateReadingProgress()
+    })
+  },
+  { immediate: true }
 )
 
 watch(isEditing, (editing) => {
   if (!editing && speechListening.value) {
     stopSpeechRecognition()
-  }
-
-  if (!editing) {
-    isVoicePanelOpen.value = false
   }
 })
 
@@ -1165,11 +1431,14 @@ function handleWindowKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape' && isSharePanelOpen.value) {
     isSharePanelOpen.value = false
   }
-
-  if (event.key === 'Escape' && isVoicePanelOpen.value) {
-    isVoicePanelOpen.value = false
-  }
 }
+
+watch(
+  [() => draft.title, () => draft.content, isEditing, selectedDocumentId],
+  () => {
+    scheduleAutoSave()
+  }
+)
 
 function syncDraft() {
   draft.title = selectedDocument.value?.title ?? ''
@@ -1200,6 +1469,25 @@ const documentMetaLabel = computed(() => {
 
   return `${updatedAt} · ${updatedByName}`
 })
+
+const sharedDocumentMetaLabel = computed(() => {
+  if (!sharedDocumentDetail.value) {
+    return ''
+  }
+
+  const updatedAt = formatTimestamp(sharedDocumentDetail.value.document.updatedAt)
+
+  if (workspaceView.value === 'shared-with-me') {
+    return `${updatedAt} · ${sharedDocumentDetail.value.owner.username}`
+  }
+
+  const shareCount = selectedMySharedDocument.value?.shareCount ?? 0
+  return t('workspace.mySharesMeta', { count: shareCount, updatedAt })
+})
+
+const sharedDocumentRecipients = computed(
+  () => selectedMySharedDocument.value?.recipients ?? []
+)
 
 const documentFolderLabel = computed(() => {
   const folders = selectedPathNodes.value.slice(0, -1)
@@ -1326,6 +1614,19 @@ function clearSpeechDraft() {
   speechInterimText.value = ''
 }
 
+function isMobileSpeechRuntime() {
+  if (!import.meta.client) {
+    return false
+  }
+
+  return /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent)
+}
+
+function shouldUseSpeechPermissionPreflight() {
+  // Mobile Chromium is more reliable when recognition starts directly from the tap gesture.
+  return !isMobileSpeechRuntime()
+}
+
 function initSpeechRecognition() {
   if (!import.meta.client) {
     return
@@ -1355,8 +1656,8 @@ function initSpeechRecognition() {
 
   const recognition = new speechConstructor()
   recognition.lang = 'zh-CN'
-  recognition.continuous = true
-  recognition.interimResults = true
+  recognition.continuous = !isMobileSpeechRuntime()
+  recognition.interimResults = !isMobileSpeechRuntime()
   recognition.onresult = (event) => {
     let finalChunk = ''
     let interimChunk = ''
@@ -1478,7 +1779,18 @@ async function startSpeechRecognition() {
 
   speechError.value = ''
   clearSpeechDraft()
-  const hasMicrophonePermission = await ensureMicrophonePermission()
+  speechRecognitionErrorCode.value = ''
+
+  if (!window.isSecureContext) {
+    speechError.value = t('workspace.voiceErrorInsecureContext')
+    speechMicErrorCode.value = 'insecure-context'
+    return
+  }
+
+  const usePermissionPreflight = shouldUseSpeechPermissionPreflight()
+  const hasMicrophonePermission = usePermissionPreflight
+    ? await ensureMicrophonePermission()
+    : true
 
   if (
     !hasMicrophonePermission &&
@@ -1492,9 +1804,15 @@ async function startSpeechRecognition() {
   try {
     recognition.start()
     speechListening.value = true
+    if (!usePermissionPreflight) {
+      void updateSpeechPermissionState()
+    }
   } catch {
     speechListening.value = false
-    speechError.value = t('workspace.voiceErrorDeniedManual')
+    speechError.value =
+      speechPermissionState.value === 'denied'
+        ? t('workspace.voiceErrorDeniedManual')
+        : t('workspace.voiceErrorGeneric')
   }
 }
 
@@ -1645,6 +1963,53 @@ async function loadDocument(
   }
 }
 
+async function loadSharedDocumentDetail(
+  documentId: number | null,
+  options: { force?: boolean } = {}
+) {
+  if (!documentId || workspaceView.value === 'docs') {
+    sharedDocumentDetail.value = null
+    sharedDocumentError.value = ''
+    sharedDocumentPending.value = false
+    return
+  }
+
+  const cached = sharedDocumentCache.get(documentId)
+
+  if (cached && !options.force) {
+    sharedDocumentDetail.value = cached
+    sharedDocumentError.value = ''
+    return
+  }
+
+  sharedDocumentPending.value = true
+  sharedDocumentError.value = ''
+
+  try {
+    const response = await $fetch<ApiResponse<SharedDocumentDetail>>(
+      `/api/shares/${documentId}`,
+      {
+        headers: requestHeaders
+      }
+    )
+
+    if (!response.ok) {
+      sharedDocumentDetail.value = null
+      sharedDocumentError.value = response.error.message
+      return
+    }
+
+    sharedDocumentCache.set(documentId, response.data)
+    sharedDocumentDetail.value = response.data
+  } catch (error) {
+    sharedDocumentDetail.value = null
+    sharedDocumentError.value =
+      error instanceof Error ? error.message : t('workspace.sharedLoadFailed')
+  } finally {
+    sharedDocumentPending.value = false
+  }
+}
+
 async function toggleFolder(nodeId: number) {
   const expanded = new Set(expandedFolderIds.value)
 
@@ -1661,9 +2026,14 @@ async function toggleFolder(nodeId: number) {
 }
 
 function selectNode(node: TreeNode | DocumentTreeItem) {
+  if (workspaceView.value !== 'docs') {
+    setWorkspaceView('docs')
+  }
+
   if (selectedDocumentId.value === node.id) {
     isMobileTreeOpen.value = false
     isActionMenuOpen.value = false
+    void syncWorkspaceQuery()
     void loadDocument(node.id)
     return
   }
@@ -1869,6 +2239,63 @@ async function revokeDocumentShare(sharedWithUserId: number) {
     }
 
     documentShares.value = response.data.shares
+  } catch (error) {
+    shareError.value = readShareApiError(error)
+  } finally {
+    sharePending.value = false
+  }
+}
+
+async function revokeOwnedSharedDocument(sharedWithUserId: number) {
+  const detail = sharedDocumentDetail.value
+
+  if (
+    workspaceView.value !== 'my-shares' ||
+    !detail ||
+    sharePending.value
+  ) {
+    return
+  }
+
+  sharePending.value = true
+  shareError.value = ''
+  shareMessage.value = ''
+
+  try {
+    const response = await $fetch<
+      ApiResponse<{ shares: DocumentShareListItem[] }>
+    >(
+      `/api/spaces/${detail.space.id}/docs/${detail.document.id}/shares/${sharedWithUserId}`,
+      {
+        method: 'DELETE',
+        body: {}
+      }
+    )
+
+    if (!response.ok) {
+      shareError.value = response.error.message
+      return
+    }
+
+    const revokedUser = sharedDocumentRecipients.value.find(
+      (item) => item.id === sharedWithUserId
+    )
+
+    shareMessage.value = revokedUser
+      ? t('workspace.shareRevoked', { username: revokedUser.username })
+      : ''
+    sharedDocumentCache.delete(detail.document.id)
+    await refreshMySharedDocuments()
+
+    if (
+      mySharedDocuments.value.some(
+        (document) => document.documentId === detail.document.id
+      )
+    ) {
+      await loadSharedDocumentDetail(detail.document.id, { force: true })
+    } else {
+      sharedDocumentDetail.value = null
+    }
   } catch (error) {
     shareError.value = readShareApiError(error)
   } finally {
@@ -2422,7 +2849,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
         >
       </div>
 
-      <template v-if="selectedDocument">
+      <template v-if="workspaceView === 'docs' && selectedDocument">
         <button
           v-if="isActionMenuOpen"
           type="button"
@@ -3039,6 +3466,163 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
         </div>
       </template>
 
+      <div v-else-if="isSharedView" class="flex min-h-0 flex-1 flex-col">
+        <div class="fd-doc-header fd-immersive-header">
+          <div class="fd-immersive-left">
+            <button
+              type="button"
+              class="fd-icon-button md:hidden"
+              :title="t('workspace.tree')"
+              @click="isMobileTreeOpen = true"
+            >
+              <WorkspaceIcon name="folder-open" class="h-4 w-4" />
+            </button>
+            <div class="min-w-0 flex-1">
+              <h2
+                class="fd-ellipsis-title text-lg font-semibold text-slate-800 sm:text-xl"
+                :title="
+                  sharedDocumentDetail?.document.title || workspaceTreeTitle
+                "
+                :data-full-title="
+                  sharedDocumentDetail?.document.title || workspaceTreeTitle
+                "
+              >
+                {{ sharedDocumentDetail?.document.title || workspaceTreeTitle }}
+              </h2>
+              <p class="mt-1 text-xs text-slate-500 sm:text-sm">
+                {{
+                  sharedDocumentDetail
+                    ? sharedDocumentMetaLabel
+                    : t('workspace.sharedReadonlyHint')
+                }}
+              </p>
+            </div>
+          </div>
+          <div v-if="workspaceView === 'my-shares' && sharedDocumentDetail" class="fd-immersive-actions">
+            <button
+              type="button"
+              class="fd-icon-button"
+              :title="t('workspace.share')"
+              :aria-label="t('workspace.share')"
+              @click="openOwnedSharePanel"
+            >
+              <WorkspaceIcon name="settings" class="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        <div
+          v-if="isSharePanelOpen && sharedDocumentDetail && workspaceView === 'my-shares'"
+          class="fd-doc-info-modal-wrap"
+          role="dialog"
+          aria-modal="true"
+          :aria-label="t('workspace.shareDoc')"
+        >
+          <button
+            type="button"
+            class="fd-doc-info-modal-backdrop"
+            :aria-label="t('common.cancel')"
+            @click="isSharePanelOpen = false"
+          />
+          <div class="fd-doc-info-modal">
+            <div class="fd-doc-info-modal-head">
+              <h3>{{ t('workspace.shareListTitle') }}</h3>
+              <button
+                type="button"
+                class="fd-icon-button"
+                :aria-label="t('common.cancel')"
+                :title="t('common.cancel')"
+                @click="isSharePanelOpen = false"
+              >
+                <WorkspaceIcon name="close" class="h-4 w-4" />
+              </button>
+            </div>
+            <div class="mt-5 space-y-2">
+              <div
+                v-if="sharedDocumentRecipients.length === 0"
+                class="rounded-xl border border-dashed border-[rgba(31,41,55,0.14)] px-4 py-4 text-sm text-slate-500"
+              >
+                {{ t('workspace.mySharesEmpty') }}
+              </div>
+              <div
+                v-for="shareUser in sharedDocumentRecipients"
+                :key="`owned-share-modal-user-${shareUser.id}`"
+                class="flex items-center justify-between gap-3 rounded-xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.72)] px-4 py-3"
+              >
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-medium text-slate-800">
+                    {{ shareUser.username }}
+                  </p>
+                </div>
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  size="sm"
+                  :disabled="sharePending"
+                  @click="revokeOwnedSharedDocument(shareUser.id)"
+                >
+                  {{ t('workspace.shareRevoke') }}
+                </UButton>
+              </div>
+            </div>
+            <p v-if="shareError" class="mt-3 text-sm text-rose-600">
+              {{ shareError }}
+            </p>
+            <p v-if="shareMessage" class="mt-3 text-sm text-emerald-700">
+              {{ shareMessage }}
+            </p>
+          </div>
+        </div>
+
+        <div
+          v-if="sharedDocumentPending"
+          class="fd-workspace-empty mt-3 flex min-h-0 flex-1 items-center justify-center rounded-[1.2rem] border border-dashed border-[rgba(31,41,55,0.16)] bg-[rgba(255,251,245,0.72)] p-6 text-center text-slate-500"
+        >
+          {{ t('workspace.sharedLoading') }}
+        </div>
+
+        <div
+          v-else-if="sharedDocumentDetail"
+          class="mt-3 flex min-h-0 flex-1 flex-col gap-3"
+        >
+          <div class="fd-reader-shell fd-document-stage">
+            <div class="fd-reading-progress" aria-hidden="true">
+              <button
+                type="button"
+                class="fd-reading-progress-track"
+                :title="`${Math.round(readingProgress)}%`"
+                @click="jumpToProgress"
+                @pointerdown="jumpToProgress"
+              >
+                <div
+                  class="fd-reading-progress-fill"
+                  :style="{ height: `${readingProgress}%` }"
+                />
+              </button>
+              <span v-if="readingProgress > 0" class="fd-reading-progress-label"
+                >{{ Math.round(readingProgress) }}%</span
+              >
+            </div>
+            <div
+              ref="documentScrollRef"
+              class="fd-reader-scroll"
+              @scroll="updateReadingProgress"
+            >
+              <div class="fd-reader-content">
+                <MarkdownViewer :value="sharedDocumentDetail.document.content" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          v-else
+          class="fd-workspace-empty mt-3 flex min-h-0 flex-1 items-center justify-center rounded-[1.2rem] border border-dashed border-[rgba(31,41,55,0.16)] bg-[rgba(255,251,245,0.72)] p-6 text-center text-slate-500"
+        >
+          {{ sharedDocumentError || t('workspace.pickSharedDocument') }}
+        </div>
+      </div>
+
       <div v-else class="flex min-h-0 flex-1 flex-col">
         <div class="fd-doc-header fd-immersive-header">
           <div class="fd-immersive-left">
@@ -3053,15 +3637,19 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
             <div class="min-w-0 flex-1">
               <h2
                 class="fd-ellipsis-title text-lg font-semibold text-slate-800 sm:text-xl"
-                :title="currentWorkspaceName || t('workspace.documents')"
+                :title="currentWorkspaceName || workspaceTreeTitle"
                 :data-full-title="
-                  currentWorkspaceName || t('workspace.documents')
+                  currentWorkspaceName || workspaceTreeTitle
                 "
               >
-                {{ currentWorkspaceName || t('workspace.documents') }}
+                {{ currentWorkspaceName || workspaceTreeTitle }}
               </h2>
               <p class="mt-1 text-xs text-slate-500 sm:text-sm">
-                {{ t('workspace.treeHint') }}
+                {{
+                  workspaceView === 'docs'
+                    ? t('workspace.treeHint')
+                    : t('workspace.sharedReadonlyHint')
+                }}
               </p>
             </div>
           </div>
@@ -3069,7 +3657,11 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
         <div
           class="fd-workspace-empty mt-3 flex min-h-0 flex-1 items-center justify-center rounded-[1.2rem] border border-dashed border-[rgba(31,41,55,0.16)] bg-[rgba(255,251,245,0.72)] p-6 text-center text-slate-500"
         >
-          {{ t('workspace.pickDocument') }}
+          {{
+            workspaceView === 'docs'
+              ? t('workspace.pickDocument')
+              : t('workspace.pickSharedDocument')
+          }}
         </div>
       </div>
     </section>
@@ -3127,10 +3719,58 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
         </div>
       </div>
 
+      <div class="mt-3 grid grid-cols-3 gap-2 px-1">
+        <button
+          type="button"
+          class="flex items-center justify-center rounded-2xl border px-3 py-2 transition"
+          :class="
+            workspaceView === 'docs'
+              ? 'border-slate-800 bg-slate-800 text-white'
+              : 'border-[rgba(31,41,55,0.1)] bg-white/70 text-slate-600'
+          "
+          :title="t('workspace.documents')"
+          :aria-label="t('workspace.documents')"
+          @click="setWorkspaceView('docs')"
+        >
+          <WorkspaceIcon name="file" class="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          class="flex items-center justify-center rounded-2xl border px-3 py-2 transition"
+          :class="
+            workspaceView === 'shared-with-me'
+              ? 'border-slate-800 bg-slate-800 text-white'
+              : 'border-[rgba(31,41,55,0.1)] bg-white/70 text-slate-600'
+          "
+          :title="t('workspace.sharedWithMe')"
+          :aria-label="t('workspace.sharedWithMe')"
+          @click="setWorkspaceView('shared-with-me')"
+        >
+          <WorkspaceIcon name="share" class="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          class="flex items-center justify-center rounded-2xl border px-3 py-2 transition"
+          :class="
+            workspaceView === 'my-shares'
+              ? 'border-slate-800 bg-slate-800 text-white'
+              : 'border-[rgba(31,41,55,0.1)] bg-white/70 text-slate-600'
+          "
+          :title="t('workspace.myShares')"
+          :aria-label="t('workspace.myShares')"
+          @click="setWorkspaceView('my-shares')"
+        >
+          <WorkspaceIcon name="users" class="h-4 w-4" />
+        </button>
+      </div>
+
       <div class="fd-tree-heading">
         <div>
-          <p class="text-xs text-slate-500">文档目录</p>
-          <div v-if="treeLoadPending" class="mt-1.5 space-y-1">
+          <p class="text-xs text-slate-500">{{ workspaceTreeTitle }}</p>
+          <div
+            v-if="workspaceView === 'docs' && treeLoadPending"
+            class="mt-1.5 space-y-1"
+          >
             <p class="text-[11px] text-slate-400">
               {{ treeLoadLabel || t('workspace.expandAll') }}
               {{ Math.round(treeLoadProgress) }}%
@@ -3145,7 +3785,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
             </div>
           </div>
         </div>
-        <div class="flex items-center gap-1.5">
+        <div v-if="workspaceView === 'docs'" class="flex items-center gap-1.5">
           <button
             type="button"
             class="fd-tree-header-button"
@@ -3186,7 +3826,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
       </div>
 
       <form
-        v-if="createNodeMode"
+        v-if="workspaceView === 'docs' && createNodeMode"
         class="mt-4 space-y-3"
         @submit.prevent="createNode"
       >
@@ -3220,7 +3860,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
         </div>
       </form>
 
-      <div class="fd-tree-list mt-2.5 space-y-1">
+      <div v-if="workspaceView === 'docs'" class="fd-tree-list mt-2.5 space-y-1">
         <div
           v-for="item in visibleTreeNodes"
           :key="item.id"
@@ -3288,6 +3928,46 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
           class="rounded-2xl border border-dashed border-[rgba(31,41,55,0.16)] px-4 py-6 text-sm leading-6 text-slate-500"
         >
           {{ t('workspace.noDocuments') }}
+        </div>
+      </div>
+
+      <div v-else class="fd-tree-list mt-2.5 space-y-2">
+        <button
+          v-for="item in activeSharedSidebarItems"
+          :key="`shared-list-${workspaceView}-${item.documentId}`"
+          type="button"
+          class="w-full rounded-[1.25rem] border px-3 py-3 text-left transition"
+          :class="
+            selectedSharedDocumentId === item.documentId
+              ? 'border-[rgba(15,23,42,0.5)] bg-[rgba(255,255,255,0.92)] shadow-[0_10px_24px_rgba(15,23,42,0.08)]'
+              : 'border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.72)] hover:border-[rgba(31,41,55,0.18)]'
+          "
+          @click="selectSharedDocument(item.documentId)"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="truncate text-sm font-semibold text-slate-800">
+                {{ item.title }}
+              </p>
+              <p class="mt-1 text-xs text-slate-500">
+                {{ item.subtitle }}
+              </p>
+            </div>
+            <span class="text-[11px] text-slate-400">
+              {{ formatTimestamp(item.timestamp) }}
+            </span>
+          </div>
+        </button>
+
+        <div
+          v-if="activeSharedDocuments.length === 0"
+          class="rounded-2xl border border-dashed border-[rgba(31,41,55,0.16)] px-4 py-6 text-sm leading-6 text-slate-500"
+        >
+          {{
+            workspaceView === 'shared-with-me'
+              ? t('workspace.sharedWithMeEmpty')
+              : t('workspace.mySharesEmpty')
+          }}
         </div>
       </div>
     </aside>
