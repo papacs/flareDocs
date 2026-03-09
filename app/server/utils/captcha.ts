@@ -250,17 +250,21 @@ export async function verifyCaptchaChallenge(
       return false
     }
 
-    usedCaptchaChallenges.set(
-      payload.challengeId,
-      Date.now() + USED_CHALLENGE_TTL_MS
-    )
-
     const actualAnswerHash = await buildCaptchaAnswerHash(
       event,
       payload.nonce,
       input
     )
-    return timingSafeEqual(payload.answerHash, actualAnswerHash)
+    const isValid = timingSafeEqual(payload.answerHash, actualAnswerHash)
+
+    if (isValid) {
+      usedCaptchaChallenges.set(
+        payload.challengeId,
+        Date.now() + USED_CHALLENGE_TTL_MS
+      )
+    }
+
+    return isValid
   } catch {
     return false
   }

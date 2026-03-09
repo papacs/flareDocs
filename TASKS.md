@@ -27,6 +27,7 @@
 - Validation and Cloudflare provisioning follow-up
 - Reinstall dependencies on the active platform before re-running Nuxt validation
 - Current sandbox has no outbound network; `pnpm install` fails with `EAI_AGAIN`, so lint/typecheck validation must be re-run on a networked machine
+- Login performance and reliability follow-up on newly opened browsers
 
 ## Completed
 
@@ -222,6 +223,7 @@ Date: 2026-03-07
 - Upgraded live-preview consistency in [MarkdownEditor.client.vue](/mnt/f/newworkspace/flareDocs/app/components/MarkdownEditor.client.vue) + [main.css](/mnt/f/newworkspace/flareDocs/app/assets/css/main.css): non-active math/table sections now render as preview blocks, non-active source-token colors are normalized to reading colors, and line-level render spacing was tightened; aligned viewer paragraph behavior by switching Markdown soft-break handling to `breaks: false` in [renderMarkdown.ts](/mnt/f/newworkspace/flareDocs/app/utils/renderMarkdown.ts); documented in [README.md](/mnt/f/newworkspace/flareDocs/README.md)
 - Extended live-preview block rendering to list sections in [MarkdownEditor.client.vue](/mnt/f/newworkspace/flareDocs/app/components/MarkdownEditor.client.vue) so non-active unordered/ordered lists keep bullets and numbering, and fixed non-active line color selector accuracy in [main.css](/mnt/f/newworkspace/flareDocs/app/assets/css/main.css) to better match preview color tones.
 - Improved workspace load responsiveness in [spaces/[spaceId].vue](/mnt/f/newworkspace/flareDocs/app/pages/spaces/[spaceId].vue): added in-memory document cache with version-aware reuse, tree-item hover prefetch, and `Set`-based expanded-folder membership checks; added a top loading progress bar in [main.css](/mnt/f/newworkspace/flareDocs/app/assets/css/main.css) for slow document opens.
+- Optimized login reliability in [login.vue](/mnt/e/workspace/flareDocs/app/pages/login.vue), [captcha.ts](/mnt/e/workspace/flareDocs/app/server/utils/captcha.ts), and [bootstrap.ts](/mnt/e/workspace/flareDocs/app/server/utils/bootstrap.ts): login page no longer blocks first paint on captcha or `/api/auth/me`, captcha tokens are only consumed after a successful validation, duplicate submits/refreshes are gated on the client, and bootstrap-admin checks are cached per isolate to cut repeated auth-route DB work.
 - `pnpm typecheck` still fails in this environment due missing optional native package `@oxc-parser/binding-linux-x64-gnu`; frontend changes were validated with `pnpm prettier --check`
 
 ## In Progress

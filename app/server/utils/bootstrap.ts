@@ -7,6 +7,13 @@ import { getDb } from './db'
 import { hashPassword } from './password'
 import { ensurePersonalWorkspace } from './spaces'
 
+let bootstrapAdminResult:
+  | Awaited<ReturnType<typeof ensureDefaultAdminInternal>>
+  | undefined
+let bootstrapAdminPromise: Promise<
+  Awaited<ReturnType<typeof ensureDefaultAdminInternal>>
+> | null = null
+
 export async function ensureDefaultAdmin(event: H3Event) {
   const rawBootstrapPassword = useRuntimeConfig(event).bootstrapAdminPassword
   const bootstrapPassword =
@@ -20,6 +27,29 @@ export async function ensureDefaultAdmin(event: H3Event) {
     return null
   }
 
+  if (bootstrapAdminResult !== undefined) {
+    return bootstrapAdminResult
+  }
+
+  if (bootstrapAdminPromise) {
+    return await bootstrapAdminPromise
+  }
+
+  bootstrapAdminPromise = ensureDefaultAdminInternal(event, bootstrapPassword)
+
+  try {
+    const admin = await bootstrapAdminPromise
+    bootstrapAdminResult = admin
+    return admin
+  } finally {
+    bootstrapAdminPromise = null
+  }
+}
+
+async function ensureDefaultAdminInternal(
+  event: H3Event,
+  bootstrapPassword: string
+) {
   const db = getDb(event)
   const [existingAdmin] = await db
     .select({
@@ -35,6 +65,7 @@ export async function ensureDefaultAdmin(event: H3Event) {
     .limit(1)
 
   if (existingAdmin) {
+    await ensurePersonalWorkspace(db, existingAdmin)
     return existingAdmin
   }
 

@@ -2,7 +2,6 @@
 import type { ApiResponse, AuthUser } from '../types/api'
 
 const { t } = useAppLocale()
-const currentUser = ref<null | { id: number; username: string }>(null)
 const unauthenticatedUserResponse: ApiResponse<{ user: AuthUser }> = {
   ok: false,
   error: {
@@ -19,10 +18,12 @@ const pending = ref(false)
 const errorMessage = ref('')
 const captchaImageUrl = ref('')
 const captchaToken = ref('')
+const captchaLoading = ref(false)
 let captchaRequestSerial = 0
 
 async function loadCaptcha() {
   const requestSerial = ++captchaRequestSerial
+  captchaLoading.value = true
 
   try {
     const refreshNonce = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
@@ -53,6 +54,10 @@ async function loadCaptcha() {
     }
   } catch {
     // keep fallback text below
+  } finally {
+    if (requestSerial === captchaRequestSerial) {
+      captchaLoading.value = false
+    }
   }
 
   if (requestSerial !== captchaRequestSerial) {
@@ -63,19 +68,31 @@ async function loadCaptcha() {
   captchaToken.value = ''
 }
 
-await loadCaptcha()
-
-const { data: meResponse } = await useAsyncData('login-auth-me', () =>
-  $fetch<ApiResponse<{ user: AuthUser }>>('/api/auth/me', {
-    headers: import.meta.server ? useRequestHeaders(['cookie']) : undefined
-  }).catch(() => unauthenticatedUserResponse)
+const { data: meResponse } = await useAsyncData(
+  'login-auth-me',
+  () =>
+    $fetch<ApiResponse<{ user: AuthUser }>>('/api/auth/me', {
+      headers: import.meta.server ? useRequestHeaders(['cookie']) : undefined
+    }).catch(() => unauthenticatedUserResponse),
+  {
+    server: false,
+    default: () => unauthenticatedUserResponse
+  }
 )
 
-if (meResponse.value?.ok) {
-  currentUser.value = meResponse.value.data.user
-}
+const currentUser = computed(() =>
+  meResponse.value?.ok ? meResponse.value.data.user : null
+)
+
+onMounted(() => {
+  void loadCaptcha()
+})
 
 async function submit() {
+  if (pending.value || captchaLoading.value || !captchaToken.value) {
+    return
+  }
+
   pending.value = true
   errorMessage.value = ''
 
@@ -207,6 +224,7 @@ async function submit() {
               type="button"
               class="fd-auth-captcha-box"
               :title="t('login.refreshCaptcha')"
+              :disabled="captchaLoading || pending"
               @click="loadCaptcha"
             >
               <img
@@ -230,6 +248,7 @@ async function submit() {
             color="neutral"
             class="fd-auth-submit"
             :loading="pending"
+            :disabled="pending || captchaLoading || !captchaToken"
           >
             {{ t('login.submitLogin') }}
           </UButton>
