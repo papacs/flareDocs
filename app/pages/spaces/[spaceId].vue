@@ -109,6 +109,8 @@ const treeFullyLoaded = ref(false)
 const treeLoadPending = ref(false)
 const treeLoadProgress = ref(0)
 const treeLoadLabel = ref('')
+const sharedWithMeLoaded = ref(false)
+const mySharedDocumentsLoaded = ref(false)
 
 type SpeechRecognitionLike = {
   lang: string
@@ -185,7 +187,7 @@ const draft = reactive({
   content: ''
 })
 
-const { data: spaceResponse } = await useAsyncData(
+const { data: spaceResponse } = useLazyAsyncData(
   () => `workspace-space-${spaceId.value}`,
   () =>
     $fetch<ApiResponse<{ space: SpaceDetail }>>(
@@ -193,7 +195,18 @@ const { data: spaceResponse } = await useAsyncData(
       {
         headers: requestHeaders
       }
-    )
+    ),
+  {
+    server: false,
+    default: () =>
+      ({
+        ok: false,
+        error: {
+          code: 'SPACE_PENDING',
+          message: 'Loading workspace.'
+        }
+      }) satisfies ApiResponse<{ space: SpaceDetail }>
+  }
 )
 
 const { data: spacesResponse, refresh: refreshSpaces } = await useAsyncData(
@@ -234,20 +247,23 @@ const emptyOwnedSharedDocumentsResponse: ApiResponse<{
 
 const {
   data: sharedWithMeResponse,
-  refresh: refreshSharedWithMe
-} = await useAsyncData(
+  refresh: refreshSharedWithMe,
+  status: sharedWithMeStatus
+} = useLazyAsyncData(
   'workspace-shared-with-me',
   () =>
     $fetch<ApiResponse<{ shares: SharedDocumentListItem[] }>>('/api/shares', {
       headers: requestHeaders
     }).catch(() => emptySharedDocumentsResponse),
   {
+    server: false,
+    immediate: false,
     default: () => emptySharedDocumentsResponse
   }
 )
 
 const { data: mySharedDocumentsResponse, refresh: refreshMySharedDocuments } =
-  await useAsyncData(
+  useLazyAsyncData(
     'workspace-my-shares',
     () =>
       $fetch<ApiResponse<{ shares: OwnedSharedDocumentListItem[] }>>(
@@ -257,11 +273,13 @@ const { data: mySharedDocumentsResponse, refresh: refreshMySharedDocuments } =
         }
       ).catch(() => emptyOwnedSharedDocumentsResponse),
     {
+      server: false,
+      immediate: false,
       default: () => emptyOwnedSharedDocumentsResponse
     }
   )
 
-const { data: rootTreeResponse, refresh: refreshRootTree } = await useAsyncData(
+const { data: rootTreeResponse, refresh: refreshRootTree } = useLazyAsyncData(
   () => `workspace-tree-${spaceId.value}`,
   () =>
     $fetch<ApiResponse<{ documents: DocumentTreeItem[] }>>(
@@ -269,7 +287,17 @@ const { data: rootTreeResponse, refresh: refreshRootTree } = await useAsyncData(
       {
         headers: requestHeaders
       }
-    )
+    ),
+  {
+    server: false,
+    default: () =>
+      ({
+        ok: true,
+        data: {
+          documents: []
+        }
+      }) satisfies ApiResponse<{ documents: DocumentTreeItem[] }>
+  }
 )
 
 const space = computed(() =>
@@ -603,14 +631,35 @@ function setWorkspaceView(nextView: WorkspaceView) {
   }
 
   if (nextView === 'shared-with-me') {
-    void refreshSharedWithMe()
+    void ensureSharedWorkspaceDataLoaded('shared-with-me')
   }
 
   if (nextView === 'my-shares') {
-    void refreshMySharedDocuments()
+    void ensureSharedWorkspaceDataLoaded('my-shares')
   }
 
   void syncWorkspaceQuery()
+}
+
+async function ensureSharedWorkspaceDataLoaded(
+  view: Extract<WorkspaceView, 'shared-with-me' | 'my-shares'>
+) {
+  if (view === 'shared-with-me') {
+    if (sharedWithMeLoaded.value || sharedWithMeStatus.value === 'pending') {
+      return
+    }
+
+    await refreshSharedWithMe()
+    sharedWithMeLoaded.value = true
+    return
+  }
+
+  if (mySharedDocumentsLoaded.value) {
+    return
+  }
+
+  await refreshMySharedDocuments()
+  mySharedDocumentsLoaded.value = true
 }
 
 function selectSharedDocument(documentId: number) {
@@ -1334,6 +1383,8 @@ watch(workspaceView, async (view) => {
     return
   }
 
+  await ensureSharedWorkspaceDataLoaded(view)
+
   if (!selectedSharedDocumentId.value && activeSharedDocuments.value.length > 0) {
     selectedSharedDocumentId.value = activeSharedDocuments.value[0]?.documentId ?? null
   }
@@ -1422,6 +1473,11 @@ onMounted(() => {
 
   initSpeechRecognition()
   void updateSpeechPermissionState()
+  if (workspaceView.value === 'shared-with-me') {
+    void ensureSharedWorkspaceDataLoaded('shared-with-me')
+  } else if (workspaceView.value === 'my-shares') {
+    void ensureSharedWorkspaceDataLoaded('my-shares')
+  }
   document.addEventListener('fullscreenchange', syncFullscreenState)
   document.addEventListener('visibilitychange', handleVisibilityChange)
   window.addEventListener('beforeunload', handleBeforeUnload)

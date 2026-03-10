@@ -34,22 +34,38 @@ const unauthenticatedUserResponse: ApiResponse<{ user: AuthUser }> = {
     message: 'Not authenticated.'
   }
 }
-const { data: meResponse, refresh: refreshMe } = await useAsyncData(
+const { data: meResponse, refresh: refreshMe } = useLazyAsyncData(
   'auth-me',
   () =>
     $fetch<ApiResponse<{ user: AuthUser }>>('/api/auth/me', {
       headers: cookieHeaders
-    }).catch(() => unauthenticatedUserResponse)
+    }).catch(() => unauthenticatedUserResponse),
+  {
+    server: false,
+    default: () => unauthenticatedUserResponse
+  }
 )
 
 const {
   data: spacesResponse,
   refresh: refreshSpaces,
   status: spacesStatus
-} = await useAsyncData('spaces-index', () =>
-  $fetch<ApiResponse<{ spaces: SpaceSummary[] }>>('/api/spaces', {
-    headers: cookieHeaders
-  })
+} = useLazyAsyncData(
+  'spaces-index',
+  () =>
+    $fetch<ApiResponse<{ spaces: SpaceSummary[] }>>('/api/spaces', {
+      headers: cookieHeaders
+    }),
+  {
+    server: false,
+    default: () =>
+      ({
+        ok: true,
+        data: {
+          spaces: []
+        }
+      }) satisfies ApiResponse<{ spaces: SpaceSummary[] }>
+  }
 )
 const currentUser = computed(() =>
   meResponse.value?.ok ? meResponse.value.data.user : null
@@ -74,6 +90,26 @@ const preferredWorkspace = computed(() => {
 
   return personalWorkspace.value ?? spaces.value[0] ?? null
 })
+const sharedWithMeWorkspaceTarget = computed(() =>
+  preferredWorkspace.value
+    ? {
+        path: `/spaces/${preferredWorkspace.value.id}`,
+        query: {
+          view: 'shared-with-me'
+        }
+      }
+    : undefined
+)
+const mySharesWorkspaceTarget = computed(() =>
+  preferredWorkspace.value
+    ? {
+        path: `/spaces/${preferredWorkspace.value.id}`,
+        query: {
+          view: 'my-shares'
+        }
+      }
+    : undefined
+)
 const publicSpacesCount = computed(
   () => spaces.value.filter((space) => space.visibility === 'public').length
 )
@@ -929,6 +965,22 @@ async function saveProfile() {
                   "
                 >
                   {{ t('index.openWorkspace') }}
+                </UButton>
+                <UButton
+                  size="lg"
+                  color="neutral"
+                  variant="ghost"
+                  :to="sharedWithMeWorkspaceTarget"
+                >
+                  {{ t('index.sharedWithMe') }}
+                </UButton>
+                <UButton
+                  size="lg"
+                  color="neutral"
+                  variant="ghost"
+                  :to="mySharesWorkspaceTarget"
+                >
+                  {{ t('index.myShares') }}
                 </UButton>
                 <UButton
                   size="lg"

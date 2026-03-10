@@ -126,6 +126,7 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'index.quickGuideStepShare':
       '单篇先用文档分享给指定用户，长期共建资料再放进团队工作区。',
     'index.sharedWithMe': '分享给我',
+    'index.myShares': '我分享的',
     'index.sharedWithMeSummary':
       '别人从个人工作区定向分享给你的文档，会集中出现在这里。',
     'index.viewAllShares': '查看全部分享',
@@ -479,6 +480,7 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'index.quickGuideStepShare':
       'Share a single document first; move long-lived collaborative content into a team workspace.',
     'index.sharedWithMe': 'Shared With Me',
+    'index.myShares': 'My Shares',
     'index.sharedWithMeSummary':
       'Documents someone shared with you from their personal workspace appear here.',
     'index.viewAllShares': 'View All Shared Docs',

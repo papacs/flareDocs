@@ -1881,6 +1881,32 @@ body {
     text-align: right;
   }
 
+  .fd-route-loadbar {
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: 90;
+    pointer-events: none;
+  }
+
+  .fd-route-loadbar-track {
+    height: 0.22rem;
+    width: 100%;
+    background: rgba(148, 163, 184, 0.14);
+    overflow: hidden;
+  }
+
+  .fd-route-loadbar-fill {
+    height: 100%;
+    border-radius: 9999px;
+    background: linear-gradient(
+      90deg,
+      rgba(217, 119, 6, 0.96),
+      rgba(37, 99, 235, 0.96)
+    );
+    box-shadow: 0 0 18px rgba(37, 99, 235, 0.22);
+    transition: width 160ms ease;
+  }
+
   .fd-document-stage {
     flex: 1 1 auto;
     min-height: 0;
