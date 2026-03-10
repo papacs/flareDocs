@@ -1,4 +1,4 @@
-import { desc, eq, inArray, sql } from 'drizzle-orm'
+import { desc, eq, inArray, or, sql } from 'drizzle-orm'
 
 import { documents, spaceMembers, spaces } from '../../../../db/schema'
 import { getAuthenticatedUser } from '../../utils/auth'
@@ -39,6 +39,20 @@ export default defineEventHandler(async (event) => {
 
   await ensurePersonalWorkspace(db, user)
 
+  const teamSpaces = await db
+    .select({
+      id: spaces.id,
+      name: spaces.name,
+      slug: spaces.slug,
+      visibility: spaces.visibility,
+      createdBy: spaces.createdBy,
+      createdAt: spaces.createdAt,
+      documentCount: sql<number>`0`
+    })
+    .from(spaces)
+    .where(or(eq(spaces.visibility, 'team'), eq(spaces.visibility, 'public')))
+    .orderBy(desc(spaces.createdAt))
+
   const joinedSpaces = await db
     .select({
       id: spaces.id,
@@ -70,11 +84,11 @@ export default defineEventHandler(async (event) => {
     }
   >()
 
-  for (const space of publicSpaces) {
+  for (const space of teamSpaces) {
     dedupedSpaces.set(space.id, {
       ...space,
       isPersonal: false,
-      myRole: null
+      myRole: space.visibility === 'team' ? 'editor' : null
     })
   }
 

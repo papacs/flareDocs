@@ -111,7 +111,8 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'index.spaceTypeGuideTitle': '空间类型怎么选',
     'index.spaceTypeGuideSummary': '按可见范围选类型，后续也可再调整。',
     'index.spaceTypeGuidePrivate': '仅你和被授权成员可见，适合个人笔记和草稿。',
-    'index.spaceTypeGuideTeam': '团队成员可见，适合项目协作和内部沉淀。',
+    'index.spaceTypeGuideTeam':
+      '所有已登录用户都可查看和协作编辑，适合项目协作和团队内部沉淀。',
     'index.spaceTypeGuidePublic': '所有人可读，适合公告、手册和对外知识。',
     'index.spaceTypeGuideTip':
       '不确定时先选“私有”，整理好后再切为“团队/公开”。',
@@ -458,7 +459,7 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'index.spaceTypeGuidePrivate':
       'Visible to you and authorized members only. Best for drafts and personal notes.',
     'index.spaceTypeGuideTeam':
-      'Visible to team members. Best for project collaboration and internal docs.',
+      'All signed-in users can view and collaborate by default. Best for project collaboration and internal docs.',
     'index.spaceTypeGuidePublic':
       'Readable by everyone. Best for announcements, manuals, and shared knowledge.',
     'index.spaceTypeGuideTip':

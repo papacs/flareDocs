@@ -21,6 +21,26 @@ const roleRank: Record<SpaceRole, number> = {
   admin: 3
 }
 
+function resolveImplicitRole(
+  visibility: SpaceVisibility,
+  userId?: number | null,
+  membershipRole?: SpaceRole | null
+) {
+  if (membershipRole) {
+    return membershipRole
+  }
+
+  if (!userId) {
+    return visibility === 'public' ? null : null
+  }
+
+  if (visibility === 'team') {
+    return 'editor' as const
+  }
+
+  return visibility === 'public' ? null : null
+}
+
 export class SpaceAccessError extends Error {
   statusCode: number
   code: string
@@ -202,7 +222,7 @@ export async function getSpaceContext(
 
   return {
     space,
-    role: membership?.role ?? null
+    role: resolveImplicitRole(space.visibility, userId, membership?.role ?? null)
   }
 }
 
@@ -215,6 +235,17 @@ export async function assertSpaceRole(
   const { space, role } = await getSpaceContext(db, spaceId, user?.id)
 
   if (requiredRole === 'viewer' && space.visibility === 'public') {
+    return {
+      space,
+      role
+    }
+  }
+
+  if (
+    (requiredRole === 'viewer' || requiredRole === 'editor') &&
+    user &&
+    space.visibility === 'team'
+  ) {
     return {
       space,
       role
