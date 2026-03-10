@@ -485,6 +485,7 @@ function mapSpeechErrorMessage(errorCode?: string) {
 }
 
 const isSpaceMenuOpen = ref(false)
+const isTreeToolsMenuOpen = ref(false)
 const workspaceOptions = computed(() => {
   const knownIds = new Set<number>()
   const options: Array<{ id: number; name: string }> = []
@@ -611,6 +612,7 @@ const workspaceTreeTitle = computed(() => {
 
 async function selectWorkspace(nextSpaceId: number) {
   isSpaceMenuOpen.value = false
+  isTreeToolsMenuOpen.value = false
 
   if (!nextSpaceId || nextSpaceId === spaceId.value) {
     return
@@ -1414,6 +1416,10 @@ onBeforeUnmount(() => {
 function handleWindowKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape' && isSpaceMenuOpen.value) {
     isSpaceMenuOpen.value = false
+  }
+
+  if (event.key === 'Escape' && isTreeToolsMenuOpen.value) {
+    isTreeToolsMenuOpen.value = false
   }
 
   if (event.key === 'Escape' && isMobileTreeOpen.value) {
@@ -3672,43 +3678,59 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
     >
       <div class="fd-tree-workspace">
         <div class="fd-tree-workspace-row">
-          <div class="fd-workspace-switch-shell">
+          <div class="fd-tree-workspace-mainbar">
+            <NuxtLink
+              class="fd-sidebar-home-link"
+              to="/"
+              :title="t('common.home')"
+              :aria-label="t('common.home')"
+            >
+              <WorkspaceIcon name="home" class="h-4 w-4" />
+            </NuxtLink>
+
             <button
               type="button"
-              class="fd-workspace-switch fd-workspace-switch-button"
-              :aria-label="t('workspace.space')"
-              :aria-expanded="isSpaceMenuOpen ? 'true' : 'false'"
-              @click="isSpaceMenuOpen = !isSpaceMenuOpen"
+              class="fd-sidebar-view-tab"
+              :class="
+                workspaceView === 'docs'
+                  ? 'border-slate-800 bg-slate-800 text-white'
+                  : 'border-[rgba(31,41,55,0.1)] bg-white/70 text-slate-600'
+              "
+              :title="t('workspace.documents')"
+              :aria-label="t('workspace.documents')"
+              @click="setWorkspaceView('docs')"
             >
-              <span class="truncate">{{ currentWorkspaceName }}</span>
+              <WorkspaceIcon name="file" class="h-4 w-4" />
             </button>
             <button
-              v-if="isSpaceMenuOpen"
               type="button"
-              class="fd-workspace-switch-backdrop"
-              aria-label="关闭空间菜单"
-              @click="isSpaceMenuOpen = false"
-            />
-            <div v-if="isSpaceMenuOpen" class="fd-workspace-switch-menu">
-              <button
-                v-for="workspace in workspaceOptions"
-                :key="workspace.id"
-                type="button"
-                class="fd-workspace-switch-option"
-                :class="
-                  workspace.id === spaceId
-                    ? 'fd-workspace-switch-option-active'
-                    : ''
-                "
-                @click="selectWorkspace(workspace.id)"
-              >
-                {{ workspace.name }}
-              </button>
-            </div>
+              class="fd-sidebar-view-tab"
+              :class="
+                workspaceView === 'shared-with-me'
+                  ? 'border-slate-800 bg-slate-800 text-white'
+                  : 'border-[rgba(31,41,55,0.1)] bg-white/70 text-slate-600'
+              "
+              :title="t('workspace.sharedWithMe')"
+              :aria-label="t('workspace.sharedWithMe')"
+              @click="setWorkspaceView('shared-with-me')"
+            >
+              <WorkspaceIcon name="share" class="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              class="fd-sidebar-view-tab"
+              :class="
+                workspaceView === 'my-shares'
+                  ? 'border-slate-800 bg-slate-800 text-white'
+                  : 'border-[rgba(31,41,55,0.1)] bg-white/70 text-slate-600'
+              "
+              :title="t('workspace.myShares')"
+              :aria-label="t('workspace.myShares')"
+              @click="setWorkspaceView('my-shares')"
+            >
+              <WorkspaceIcon name="users" class="h-4 w-4" />
+            </button>
           </div>
-          <NuxtLink class="fd-workspace-home" to="/" :title="t('common.home')">
-            <BrandMark size="sm" :show-name="false" />
-          </NuxtLink>
           <button
             type="button"
             class="fd-mobile-tree-close"
@@ -3719,54 +3741,108 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
         </div>
       </div>
 
-      <div class="mt-3 grid grid-cols-3 gap-2 px-1">
-        <button
-          type="button"
-          class="flex items-center justify-center rounded-2xl border px-3 py-2 transition"
-          :class="
-            workspaceView === 'docs'
-              ? 'border-slate-800 bg-slate-800 text-white'
-              : 'border-[rgba(31,41,55,0.1)] bg-white/70 text-slate-600'
-          "
-          :title="t('workspace.documents')"
-          :aria-label="t('workspace.documents')"
-          @click="setWorkspaceView('docs')"
-        >
-          <WorkspaceIcon name="file" class="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          class="flex items-center justify-center rounded-2xl border px-3 py-2 transition"
-          :class="
-            workspaceView === 'shared-with-me'
-              ? 'border-slate-800 bg-slate-800 text-white'
-              : 'border-[rgba(31,41,55,0.1)] bg-white/70 text-slate-600'
-          "
-          :title="t('workspace.sharedWithMe')"
-          :aria-label="t('workspace.sharedWithMe')"
-          @click="setWorkspaceView('shared-with-me')"
-        >
-          <WorkspaceIcon name="share" class="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          class="flex items-center justify-center rounded-2xl border px-3 py-2 transition"
-          :class="
-            workspaceView === 'my-shares'
-              ? 'border-slate-800 bg-slate-800 text-white'
-              : 'border-[rgba(31,41,55,0.1)] bg-white/70 text-slate-600'
-          "
-          :title="t('workspace.myShares')"
-          :aria-label="t('workspace.myShares')"
-          @click="setWorkspaceView('my-shares')"
-        >
-          <WorkspaceIcon name="users" class="h-4 w-4" />
-        </button>
-      </div>
-
       <div class="fd-tree-heading">
-        <div>
-          <p class="text-xs text-slate-500">{{ workspaceTreeTitle }}</p>
+        <div class="min-w-0 flex-1">
+          <p v-if="workspaceView !== 'docs'" class="fd-tree-heading-label">
+            {{ workspaceTreeTitle }}
+          </p>
+          <div v-if="workspaceView === 'docs'" class="fd-tree-heading-docs-row">
+            <div class="fd-workspace-switch-shell flex-1">
+              <button
+                type="button"
+                class="fd-workspace-switch fd-workspace-switch-button"
+                :aria-label="t('workspace.space')"
+                :aria-expanded="isSpaceMenuOpen ? 'true' : 'false'"
+                @click="isSpaceMenuOpen = !isSpaceMenuOpen"
+              >
+                <span class="truncate">{{ currentWorkspaceName }}</span>
+              </button>
+              <button
+                v-if="isSpaceMenuOpen"
+                type="button"
+                class="fd-workspace-switch-backdrop"
+                aria-label="关闭空间菜单"
+                @click="isSpaceMenuOpen = false"
+              />
+              <div v-if="isSpaceMenuOpen" class="fd-workspace-switch-menu">
+                <button
+                  v-for="workspace in workspaceOptions"
+                  :key="workspace.id"
+                  type="button"
+                  class="fd-workspace-switch-option"
+                  :class="
+                    workspace.id === spaceId
+                      ? 'fd-workspace-switch-option-active'
+                      : ''
+                  "
+                  @click="selectWorkspace(workspace.id)"
+                >
+                  {{ workspace.name }}
+                </button>
+              </div>
+            </div>
+
+            <div class="relative flex items-center">
+              <button
+                type="button"
+                class="fd-tree-tools-trigger"
+                :title="t('workspace.actions')"
+                :aria-label="t('workspace.actions')"
+                :aria-expanded="isTreeToolsMenuOpen ? 'true' : 'false'"
+                @click="isTreeToolsMenuOpen = !isTreeToolsMenuOpen"
+              >
+                <WorkspaceIcon name="more" class="h-4 w-4" />
+              </button>
+              <button
+                v-if="isTreeToolsMenuOpen"
+                type="button"
+                class="fd-workspace-switch-backdrop"
+                aria-label="关闭目录操作菜单"
+                @click="isTreeToolsMenuOpen = false"
+              />
+              <div v-if="isTreeToolsMenuOpen" class="fd-tree-tools-menu">
+                <template v-if="canEdit">
+                  <button
+                    type="button"
+                    class="fd-tree-tools-item"
+                    @click="isTreeToolsMenuOpen = false; createNodeMode = 'doc'"
+                  >
+                    <WorkspaceIcon name="plus-file" class="h-4 w-4" />
+                    <span>{{ t('workspace.createDoc') }}</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="fd-tree-tools-item"
+                    @click="
+                      isTreeToolsMenuOpen = false;
+                      createNodeMode = 'folder'
+                    "
+                  >
+                    <WorkspaceIcon name="plus-folder" class="h-4 w-4" />
+                    <span>{{ t('workspace.createFolder') }}</span>
+                  </button>
+                </template>
+                <button
+                  type="button"
+                  class="fd-tree-tools-item"
+                  :disabled="treeLoadPending"
+                  @click="isTreeToolsMenuOpen = false; expandAllFolders()"
+                >
+                  <WorkspaceIcon name="expand-all" class="h-4 w-4" />
+                  <span>{{ t('workspace.expandAll') }}</span>
+                </button>
+                <button
+                  type="button"
+                  class="fd-tree-tools-item"
+                  :disabled="treeLoadPending"
+                  @click="isTreeToolsMenuOpen = false; collapseAllFolders()"
+                >
+                  <WorkspaceIcon name="collapse-all" class="h-4 w-4" />
+                  <span>{{ t('workspace.collapseAll') }}</span>
+                </button>
+              </div>
+            </div>
+          </div>
           <div
             v-if="workspaceView === 'docs' && treeLoadPending"
             class="mt-1.5 space-y-1"
@@ -3784,44 +3860,6 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
               />
             </div>
           </div>
-        </div>
-        <div v-if="workspaceView === 'docs'" class="flex items-center gap-1.5">
-          <button
-            type="button"
-            class="fd-tree-header-button"
-            :title="t('workspace.expandAll')"
-            :disabled="treeLoadPending"
-            @click="expandAllFolders"
-          >
-            <WorkspaceIcon name="expand-all" class="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            class="fd-tree-header-button"
-            :title="t('workspace.collapseAll')"
-            :disabled="treeLoadPending"
-            @click="collapseAllFolders"
-          >
-            <WorkspaceIcon name="collapse-all" class="h-4 w-4" />
-          </button>
-          <template v-if="canEdit">
-            <button
-              type="button"
-              class="fd-tree-header-button"
-              :title="t('workspace.doc')"
-              @click="createNodeMode = 'doc'"
-            >
-              <WorkspaceIcon name="plus-file" class="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              class="fd-tree-header-button"
-              :title="t('workspace.folder')"
-              @click="createNodeMode = 'folder'"
-            >
-              <WorkspaceIcon name="plus-folder" class="h-4 w-4" />
-            </button>
-          </template>
         </div>
       </div>
 
