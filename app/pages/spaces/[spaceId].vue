@@ -306,6 +306,11 @@ const canEdit = computed(() => {
   const role = space.value?.myRole
   return role === 'admin' || role === 'editor'
 })
+const canCurrentEdit = computed(() =>
+  workspaceView.value === 'my-shares'
+    ? Boolean(sharedDocumentDetail.value)
+    : canEdit.value
+)
 const canShareDocument = computed(() =>
   Boolean(
     selectedDocument.value &&
@@ -356,8 +361,40 @@ const selectedMySharedDocument = computed(
     ) ?? null
 )
 
+const activeActionDocument = computed(() =>
+  workspaceView.value === 'docs'
+    ? selectedDocument.value
+    : sharedDocumentDetail.value?.document ?? null
+)
+
+const activeEditableDocument = computed(() =>
+  workspaceView.value === 'my-shares'
+    ? sharedDocumentDetail.value?.document ?? null
+    : selectedDocument.value
+)
+
+const activeEditableSpaceId = computed(() =>
+  workspaceView.value === 'my-shares'
+    ? sharedDocumentDetail.value?.space.id ?? null
+    : spaceId.value
+)
+
+const canCurrentMove = computed(
+  () => workspaceView.value === 'docs' && canEdit.value
+)
+
+const canCurrentShare = computed(() => {
+  if (workspaceView.value === 'my-shares') {
+    return Boolean(
+      sharedDocumentDetail.value && !sharedDocumentDetail.value.document.isFolder
+    )
+  }
+
+  return canShareDocument.value
+})
+
 const isFileDocument = computed(() =>
-  Boolean(selectedDocument.value && !selectedDocument.value.isFolder)
+  Boolean(activeActionDocument.value && !activeActionDocument.value.isFolder)
 )
 
 function formatTimestamp(value: number | null | undefined) {
@@ -594,6 +631,7 @@ function openOwnedSharePanel() {
 
   isSharePanelOpen.value = true
   isActionMenuOpen.value = false
+  shareUsername.value = ''
   shareError.value = ''
   shareMessage.value = ''
 }
@@ -1334,9 +1372,9 @@ watch(selectedSharedDocumentId, async (documentId) => {
 })
 
 watch(
-  () => selectedDocument.value?.id ?? null,
+  () => activeActionDocument.value?.id ?? null,
   () => {
-    const document = selectedDocument.value
+    const document = activeActionDocument.value
     isMovePanelOpen.value = false
     isExportMenuOpen.value = false
     isActionMenuOpen.value = false
@@ -1440,26 +1478,26 @@ function handleWindowKeydown(event: KeyboardEvent) {
 }
 
 watch(
-  [() => draft.title, () => draft.content, isEditing, selectedDocumentId],
+  [() => draft.title, () => draft.content, isEditing, activeEditableDocument],
   () => {
     scheduleAutoSave()
   }
 )
 
 function syncDraft() {
-  draft.title = selectedDocument.value?.title ?? ''
-  draft.content = selectedDocument.value?.content ?? ''
+  draft.title = activeEditableDocument.value?.title ?? ''
+  draft.content = activeEditableDocument.value?.content ?? ''
   saveState.value = 'idle'
 }
 
 const hasDraftChanges = computed(() => {
-  if (!selectedDocument.value) {
+  if (!activeEditableDocument.value) {
     return false
   }
 
   return (
-    draft.title !== selectedDocument.value.title ||
-    draft.content !== selectedDocument.value.content
+    draft.title !== activeEditableDocument.value.title ||
+    draft.content !== activeEditableDocument.value.content
   )
 })
 
@@ -1495,6 +1533,47 @@ const sharedDocumentRecipients = computed(
   () => selectedMySharedDocument.value?.recipients ?? []
 )
 
+const activeActionDocumentFolderLabel = computed(() => {
+  if (workspaceView.value === 'docs') {
+    return documentFolderLabel.value
+  }
+
+  const path = sharedDocumentDetail.value?.path ?? []
+  const folders = path.slice(0, -1)
+
+  if (!folders.length) {
+    return t('workspace.rootFolder')
+  }
+
+  return folders.map((item) => item.title).join(' / ')
+})
+
+const activeActionDocumentSpaceLabel = computed(() => {
+  if (workspaceView.value === 'docs') {
+    return currentWorkspaceName.value || t('workspace.space')
+  }
+
+  return sharedDocumentDetail.value?.space.name ?? t('workspace.space')
+})
+
+const activeDocumentMetaLabel = computed(() => {
+  if (workspaceView.value === 'my-shares') {
+    return sharedDocumentMetaLabel.value
+  }
+
+  return documentMetaLabel.value
+})
+
+const activeEditorUploadUrl = computed(() => {
+  if (workspaceView.value === 'my-shares') {
+    return sharedDocumentDetail.value
+      ? `/api/spaces/${sharedDocumentDetail.value.space.id}/upload`
+      : ''
+  }
+
+  return `/api/spaces/${spaceId.value}/upload`
+})
+
 const documentFolderLabel = computed(() => {
   const folders = selectedPathNodes.value.slice(0, -1)
 
@@ -1519,6 +1598,17 @@ function formatFileSize(bytes: number) {
 
 const documentFileSizeLabel = computed(() => {
   const document = selectedDocument.value
+
+  if (!document || document.isFolder) {
+    return '-'
+  }
+
+  const encoder = new TextEncoder()
+  return formatFileSize(encoder.encode(document.content ?? '').length)
+})
+
+const activeActionDocumentFileSizeLabel = computed(() => {
+  const document = activeActionDocument.value
 
   if (!document || document.isFolder) {
     return '-'
@@ -2071,15 +2161,15 @@ function prefetchDocument(node: TreeNode | DocumentTreeItem) {
 }
 
 function startEdit() {
-  if (!selectedDocument.value || !canEdit.value) {
+  if (!activeEditableDocument.value || !canCurrentEdit.value) {
     return
   }
 
   isActionMenuOpen.value = false
-  draft.title = selectedDocument.value.title
+  draft.title = activeEditableDocument.value.title
   isRenaming.value = true
 
-  if (!selectedDocument.value.isFolder) {
+  if (!activeEditableDocument.value.isFolder) {
     syncDraft()
     editorRenderKey.value += 1
     isEditing.value = true
@@ -2096,9 +2186,9 @@ function cancelRename() {
 
 async function toggleEditingMode() {
   if (
-    !selectedDocument.value ||
-    !canEdit.value ||
-    selectedDocument.value.isFolder
+    !activeEditableDocument.value ||
+    !canCurrentEdit.value ||
+    activeEditableDocument.value.isFolder
   ) {
     return
   }
@@ -2134,9 +2224,29 @@ function toggleMovePanelFromActionMenu() {
 }
 
 function openDocumentInfoPanel() {
+  if (!activeActionDocument.value) {
+    return
+  }
+
   isDocumentInfoOpen.value = true
   isActionMenuOpen.value = false
   isExportMenuOpen.value = false
+}
+
+async function copyActiveDocumentContent() {
+  const document = activeActionDocument.value
+
+  if (!import.meta.client || !document) {
+    return
+  }
+
+  try {
+    await navigator.clipboard.writeText(document.content ?? '')
+    isActionMenuOpen.value = false
+    isExportMenuOpen.value = false
+  } catch {
+    workspaceError.value = t('workspace.copyFailed')
+  }
 }
 
 async function loadDocumentShares() {
@@ -2179,7 +2289,20 @@ async function openSharePanel() {
 }
 
 async function submitDocumentShare() {
-  if (!selectedDocument.value || sharePending.value) {
+  if (sharePending.value) {
+    return
+  }
+
+  const targetSpaceId =
+    workspaceView.value === 'my-shares'
+      ? sharedDocumentDetail.value?.space.id ?? null
+      : spaceId.value
+  const targetDocumentId =
+    workspaceView.value === 'my-shares'
+      ? sharedDocumentDetail.value?.document.id ?? null
+      : selectedDocument.value?.id ?? null
+
+  if (!targetSpaceId || !targetDocumentId) {
     return
   }
 
@@ -2197,7 +2320,7 @@ async function submitDocumentShare() {
   try {
     const response = await $fetch<
       ApiResponse<{ shares: DocumentShareListItem[] }>
-    >(`/api/spaces/${spaceId.value}/docs/${selectedDocument.value.id}/shares`, {
+    >(`/api/spaces/${targetSpaceId}/docs/${targetDocumentId}/shares`, {
       method: 'POST',
       body: {
         username
@@ -2209,7 +2332,14 @@ async function submitDocumentShare() {
       return
     }
 
-    documentShares.value = response.data.shares
+    if (workspaceView.value === 'my-shares') {
+      sharedDocumentCache.delete(targetDocumentId)
+      await refreshMySharedDocuments()
+      await loadSharedDocumentDetail(targetDocumentId, { force: true })
+    } else {
+      documentShares.value = response.data.shares
+    }
+
     shareMessage.value = t('workspace.shareSaved', { username })
     shareUsername.value = ''
   } catch (error) {
@@ -2315,8 +2445,10 @@ async function saveDocument(options?: {
 }) {
   const keepEditing = options?.keepEditing ?? false
   const silentError = options?.silentError ?? false
+  const document = activeEditableDocument.value
+  const targetSpaceId = activeEditableSpaceId.value
 
-  if (!selectedDocument.value || savePending.value) {
+  if (!document || !targetSpaceId || savePending.value) {
     return
   }
 
@@ -2335,7 +2467,7 @@ async function saveDocument(options?: {
 
   try {
     const endpoint =
-      `/api/spaces/${spaceId.value}/docs/${selectedDocument.value.id}` as string
+      `/api/spaces/${targetSpaceId}/docs/${document.id}` as string
     const response = await $fetch<ApiResponse<{ document: DocumentDetail }>>(
       endpoint,
       {
@@ -2343,22 +2475,33 @@ async function saveDocument(options?: {
         body: {
           title: draft.title,
           content: draft.content,
-          parentId: selectedDocument.value.parentId,
-          version: selectedDocument.value.version
+          parentId: document.parentId,
+          version: document.version
         }
       }
     )
 
     if (response.ok) {
-      selectedDocument.value = response.data.document
-      documentCache.set(response.data.document.id, response.data.document)
-      upsertTreeItem(toTreeItem(response.data.document))
+      if (workspaceView.value === 'my-shares' && sharedDocumentDetail.value) {
+        sharedDocumentDetail.value = {
+          ...sharedDocumentDetail.value,
+          document: response.data.document
+        }
+        sharedDocumentCache.set(response.data.document.id, sharedDocumentDetail.value)
+        await refreshMySharedDocuments()
+      } else {
+        selectedDocument.value = response.data.document
+        documentCache.set(response.data.document.id, response.data.document)
+        upsertTreeItem(toTreeItem(response.data.document))
+      }
       saveState.value = 'saved'
       if (!keepEditing) {
         isEditing.value = false
         isRenaming.value = false
       }
-      await expandDocumentPath(response.data.document.id)
+      if (workspaceView.value === 'docs') {
+        await expandDocumentPath(response.data.document.id)
+      }
     }
   } catch (error: unknown) {
     const apiError = error as {
@@ -2382,10 +2525,14 @@ async function saveDocument(options?: {
         version: details.version,
         updatedAt: details.updatedAt
       })
-      const currentDocumentId = selectedDocument.value?.id
+      const currentDocumentId = activeEditableDocument.value?.id
 
       if (currentDocumentId) {
-        await loadDocument(currentDocumentId)
+        if (workspaceView.value === 'my-shares') {
+          await loadSharedDocumentDetail(currentDocumentId, { force: true })
+        } else {
+          await loadDocument(currentDocumentId)
+        }
       }
 
       saveState.value = 'error'
@@ -2464,7 +2611,10 @@ async function createNode() {
 }
 
 async function deleteDocument() {
-  if (!selectedDocument.value) {
+  const document = activeEditableDocument.value
+  const targetSpaceId = activeEditableSpaceId.value
+
+  if (!document || !targetSpaceId) {
     return
   }
 
@@ -2478,16 +2628,23 @@ async function deleteDocument() {
 
   try {
     const endpoint =
-      `/api/spaces/${spaceId.value}/docs/${selectedDocument.value.id}` as string
+      `/api/spaces/${targetSpaceId}/docs/${document.id}` as string
     await $fetch(endpoint, {
       method: 'DELETE',
       body: {}
     })
 
-    removeTreeSubtree(selectedDocument.value.id)
-    selectedDocument.value = null
-    documentCache.clear()
-    selectedDocumentId.value = null
+    if (workspaceView.value === 'my-shares') {
+      sharedDocumentCache.delete(document.id)
+      await refreshMySharedDocuments()
+      sharedDocumentDetail.value = null
+      selectedSharedDocumentId.value = mySharedDocuments.value[0]?.documentId ?? null
+    } else {
+      removeTreeSubtree(document.id)
+      selectedDocument.value = null
+      documentCache.clear()
+      selectedDocumentId.value = null
+    }
   } catch (error: unknown) {
     workspaceError.value =
       error instanceof Error ? error.message : 'Unable to delete item.'
@@ -2497,7 +2654,7 @@ async function deleteDocument() {
 }
 
 function requestDeleteDocument() {
-  if (!selectedDocument.value || deletePending.value) {
+  if (!activeEditableDocument.value || deletePending.value) {
     return
   }
 
@@ -2614,16 +2771,18 @@ async function toggleFullscreen() {
 }
 
 function buildExportHtml() {
-  if (!selectedDocument.value) {
+  const document = activeActionDocument.value
+
+  if (!document) {
     return ''
   }
 
-  const body = renderMarkdown(selectedDocument.value.content)
+  const body = renderMarkdown(document.content)
   return `<!DOCTYPE html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <title>${selectedDocument.value.title}</title>
+    <title>${document.title}</title>
     <style>
       body { font-family: 'Segoe UI', sans-serif; margin: 32px; color: #111827; }
       .markdown-body { max-width: 860px; margin: 0 auto; line-height: 1.8; }
@@ -2643,16 +2802,18 @@ function buildExportHtml() {
 }
 
 function buildWordHtml() {
-  if (!selectedDocument.value) {
+  const document = activeActionDocument.value
+
+  if (!document) {
     return ''
   }
 
-  const body = renderMarkdown(selectedDocument.value.content)
+  const body = renderMarkdown(document.content)
   return `<!DOCTYPE html>
 <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40" lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <title>${selectedDocument.value.title}</title>
+    <title>${document.title}</title>
     <style>
       body { font-family: 'Segoe UI', sans-serif; margin: 24px; color: #111827; }
       .markdown-body { line-height: 1.75; }
@@ -2741,17 +2902,19 @@ async function loadHtml2Pdf() {
 }
 
 function exportDocument(format: 'md' | 'pdf' | 'word') {
-  if (!selectedDocument.value || !import.meta.client) {
+  const document = activeActionDocument.value
+
+  if (!document || !import.meta.client) {
     return
   }
 
-  const filename = sanitizeFilename(selectedDocument.value.title)
+  const filename = sanitizeFilename(document.title)
   isExportMenuOpen.value = false
   isActionMenuOpen.value = false
 
   if (format === 'md') {
     downloadBlob(
-      selectedDocument.value.content,
+      document.content,
       `${filename}.md`,
       'text/markdown;charset=utf-8'
     )
@@ -2855,9 +3018,18 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
         >
       </div>
 
-      <template v-if="workspaceView === 'docs' && selectedDocument">
+      <template
+        v-if="
+          (workspaceView === 'docs' && selectedDocument) ||
+          (workspaceView === 'my-shares' && activeActionDocument)
+        "
+      >
         <button
-          v-if="isActionMenuOpen"
+          v-if="
+            isActionMenuOpen &&
+            ((workspaceView === 'docs' && selectedDocument) ||
+              (isSharedView && sharedDocumentDetail))
+          "
           type="button"
           class="fd-action-menu-backdrop"
           aria-label="关闭操作菜单"
@@ -2874,7 +3046,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
               <WorkspaceIcon name="folder-open" class="h-4 w-4" />
             </button>
             <div class="min-w-0 flex-1">
-              <template v-if="isRenaming && canEdit">
+              <template v-if="isRenaming && canCurrentEdit">
                 <UInput
                   v-model="draft.title"
                   size="lg"
@@ -2884,20 +3056,20 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
               <h2
                 v-else
                 class="fd-ellipsis-title text-lg font-semibold text-slate-800 sm:text-xl"
-                :title="selectedDocument.title"
-                :data-full-title="selectedDocument.title"
+                :title="activeActionDocument?.title"
+                :data-full-title="activeActionDocument?.title"
               >
-                {{ selectedDocument.title }}
+                {{ activeActionDocument?.title }}
               </h2>
               <p class="mt-1 text-xs text-slate-500 sm:text-sm">
-                {{ documentMetaLabel }}
+                {{ activeDocumentMetaLabel }}
               </p>
             </div>
           </div>
 
           <div class="fd-immersive-actions">
             <button
-              v-if="isRenaming && canEdit"
+              v-if="isRenaming && canCurrentEdit"
               type="button"
               class="fd-icon-button"
               :title="t('common.save')"
@@ -2907,7 +3079,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
               <WorkspaceIcon name="save" class="h-4 w-4" />
             </button>
             <button
-              v-if="canEdit && !selectedDocument.isFolder"
+              v-if="canCurrentEdit && isFileDocument"
               type="button"
               class="fd-icon-button"
               :title="
@@ -2941,7 +3113,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
               <WorkspaceIcon name="folder-open" class="h-4 w-4" />
             </button>
             <button
-              v-if="canEdit && isFileDocument"
+              v-if="canCurrentEdit && isFileDocument"
               type="button"
               class="fd-action-menu-item"
               :title="
@@ -2958,7 +3130,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
               />
             </button>
             <button
-              v-if="canEdit && selectedDocument.isFolder && !isRenaming"
+              v-if="canCurrentEdit && activeActionDocument?.isFolder && !isRenaming"
               type="button"
               class="fd-action-menu-item"
               :title="t('common.edit')"
@@ -2968,7 +3140,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
               <WorkspaceIcon name="edit" class="h-4 w-4" />
             </button>
             <button
-              v-if="canEdit"
+              v-if="canCurrentMove"
               type="button"
               class="fd-action-menu-item"
               :title="t('workspace.move')"
@@ -2978,7 +3150,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
               <WorkspaceIcon name="move" class="h-4 w-4" />
             </button>
             <button
-              v-if="canEdit && isFileDocument && isEditing"
+              v-if="canCurrentEdit && isFileDocument && isEditing"
               type="button"
               class="fd-action-menu-item"
               :title="t('workspace.voicePanel')"
@@ -2988,14 +3160,28 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
               <WorkspaceIcon name="voice" class="h-4 w-4" />
             </button>
             <button
-              v-if="canShareDocument"
+              v-if="canCurrentShare"
               type="button"
               class="fd-action-menu-item"
               :title="t('workspace.share')"
               :aria-label="t('workspace.share')"
-              @click="openSharePanel"
+              @click="
+                workspaceView === 'my-shares'
+                  ? openOwnedSharePanel()
+                  : openSharePanel()
+              "
             >
               <WorkspaceIcon name="share" class="h-4 w-4" />
+            </button>
+            <button
+              v-if="isFileDocument"
+              type="button"
+              class="fd-action-menu-item"
+              :title="t('workspace.copy')"
+              :aria-label="t('workspace.copy')"
+              @click="copyActiveDocumentContent"
+            >
+              <WorkspaceIcon name="copy" class="h-4 w-4" />
             </button>
             <button
               v-if="isFileDocument"
@@ -3064,7 +3250,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
               </button>
             </div>
             <button
-              v-if="canEdit"
+              v-if="canCurrentEdit"
               type="button"
               class="fd-action-menu-item fd-action-menu-item-danger"
               :disabled="deletePending"
@@ -3075,7 +3261,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
               <WorkspaceIcon name="delete" class="h-4 w-4" />
             </button>
             <button
-              v-if="isRenaming && canEdit"
+              v-if="isRenaming && canCurrentEdit"
               type="button"
               class="fd-action-menu-item"
               :title="t('common.cancel')"
@@ -3088,7 +3274,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
         </div>
 
         <div
-          v-if="isDocumentInfoOpen"
+          v-if="isDocumentInfoOpen && activeActionDocument"
           class="fd-doc-info-modal-wrap"
           role="dialog"
           aria-modal="true"
@@ -3115,23 +3301,29 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
             </div>
             <div class="fd-doc-info-grid">
               <p class="fd-doc-info-label">
+                {{ t('workspace.docInfoSpace') }}
+              </p>
+              <p class="fd-doc-info-value" :title="activeActionDocumentSpaceLabel">
+                {{ activeActionDocumentSpaceLabel }}
+              </p>
+              <p class="fd-doc-info-label">
                 {{ t('workspace.docInfoFolder') }}
               </p>
-              <p class="fd-doc-info-value" :title="documentFolderLabel">
-                {{ documentFolderLabel }}
+              <p class="fd-doc-info-value" :title="activeActionDocumentFolderLabel">
+                {{ activeActionDocumentFolderLabel }}
               </p>
               <p class="fd-doc-info-label">
                 {{ t('workspace.docInfoCreatedAt') }}
               </p>
               <p class="fd-doc-info-value">
-                {{ formatTimestamp(selectedDocument.createdAt) }}
+                {{ formatTimestamp(activeActionDocument.createdAt) }}
               </p>
               <p class="fd-doc-info-label">
                 {{ t('workspace.docInfoCreatedBy') }}
               </p>
               <p class="fd-doc-info-value">
                 {{
-                  selectedDocument.createdByName?.trim() ||
+                  activeActionDocument.createdByName?.trim() ||
                   t('workspace.unknownUpdater')
                 }}
               </p>
@@ -3139,14 +3331,14 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
                 {{ t('workspace.docInfoUpdatedAt') }}
               </p>
               <p class="fd-doc-info-value">
-                {{ formatTimestamp(selectedDocument.updatedAt) }}
+                {{ formatTimestamp(activeActionDocument.updatedAt) }}
               </p>
               <p class="fd-doc-info-label">
                 {{ t('workspace.docInfoUpdatedBy') }}
               </p>
               <p class="fd-doc-info-value">
                 {{
-                  selectedDocument.updatedByName?.trim() ||
+                  activeActionDocument.updatedByName?.trim() ||
                   t('workspace.unknownUpdater')
                 }}
               </p>
@@ -3154,14 +3346,14 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
                 {{ t('workspace.docInfoFileSize') }}
               </p>
               <p class="fd-doc-info-value">
-                {{ documentFileSizeLabel }}
+                {{ activeActionDocumentFileSizeLabel }}
               </p>
             </div>
           </div>
         </div>
 
         <div
-          v-if="isSharePanelOpen && selectedDocument"
+          v-if="isSharePanelOpen && activeActionDocument"
           class="fd-doc-info-modal-wrap"
           role="dialog"
           aria-modal="true"
@@ -3186,7 +3378,9 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
                 <WorkspaceIcon name="close" class="h-4 w-4" />
               </button>
             </div>
-            <p class="mt-3 text-sm leading-6 text-slate-500">
+            <p
+              class="mt-3 text-sm leading-6 text-slate-500"
+            >
               {{ t('workspace.shareDocSummary') }}
             </p>
             <form
@@ -3216,12 +3410,21 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
                 {{ t('workspace.shareListTitle') }}
               </p>
               <div
-                v-if="documentShares.length === 0"
+                v-if="
+                  (workspaceView === 'docs' && documentShares.length === 0) ||
+                  (workspaceView === 'my-shares' &&
+                    sharedDocumentRecipients.length === 0)
+                "
                 class="rounded-xl border border-dashed border-[rgba(31,41,55,0.14)] px-4 py-4 text-sm text-slate-500"
               >
-                {{ t('workspace.shareEmpty') }}
+                {{
+                  workspaceView === 'docs'
+                    ? t('workspace.shareEmpty')
+                    : t('workspace.mySharesEmpty')
+                }}
               </div>
               <div
+                v-if="workspaceView === 'docs'"
                 v-for="shareItem in documentShares"
                 :key="`share-user-${shareItem.sharedWith.id}`"
                 class="flex items-center justify-between gap-3 rounded-xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.72)] px-4 py-3"
@@ -3244,12 +3447,33 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
                   {{ t('workspace.shareRevoke') }}
                 </UButton>
               </div>
+              <div
+                v-if="workspaceView === 'my-shares'"
+                v-for="shareUser in sharedDocumentRecipients"
+                :key="`owned-share-modal-user-${shareUser.id}`"
+                class="flex items-center justify-between gap-3 rounded-xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.72)] px-4 py-3"
+              >
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-medium text-slate-800">
+                    {{ shareUser.username }}
+                  </p>
+                </div>
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  size="sm"
+                  :disabled="sharePending"
+                  @click="revokeOwnedSharedDocument(shareUser.id)"
+                >
+                  {{ t('workspace.shareRevoke') }}
+                </UButton>
+              </div>
             </div>
           </div>
         </div>
 
         <div
-          v-if="isMovePanelOpen && canEdit"
+          v-if="isMovePanelOpen && canCurrentMove"
           class="fd-move-panel mt-3 shrink-0 rounded-[1.2rem] bg-[rgba(244,238,229,0.72)] p-3 sm:p-4"
         >
           <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
@@ -3293,7 +3517,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
         </p>
 
         <div
-          v-if="selectedDocument.isFolder"
+          v-if="activeActionDocument?.isFolder"
           class="fd-document-stage fd-folder-stage fd-folder-stage-surface mt-3 rounded-xl p-4"
         >
           <p>{{ t('workspace.folderHint') }}</p>
@@ -3303,7 +3527,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
         </div>
 
         <div
-          v-if="isDeleteConfirmOpen && selectedDocument"
+          v-if="isDeleteConfirmOpen && activeActionDocument"
           class="fd-space-delete-modal-wrap"
           role="dialog"
           aria-modal="true"
@@ -3322,7 +3546,7 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
               {{ t('common.delete') }}
             </p>
             <h3 class="mt-2 text-xl font-semibold text-slate-800">
-              {{ selectedDocument.title }}
+              {{ activeActionDocument.title }}
             </h3>
             <p class="mt-3 text-sm leading-6 text-slate-600">
               {{ t('workspace.confirmDelete') }}
@@ -3435,9 +3659,9 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
               </p>
             </div>
             <MarkdownEditor
-              :key="`editor-${selectedDocument.id}-${editorRenderKey}`"
+              :key="`editor-${activeActionDocument?.id}-${editorRenderKey}`"
               v-model="draft.content"
-              :upload-url="`/api/spaces/${spaceId}/upload`"
+              :upload-url="activeEditorUploadUrl"
             />
           </div>
 
@@ -3465,14 +3689,17 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
               @scroll="updateReadingProgress"
             >
               <div class="fd-reader-content">
-                <MarkdownViewer :value="selectedDocument.content" />
+                <MarkdownViewer :value="activeActionDocument?.content || ''" />
               </div>
             </div>
           </div>
         </div>
       </template>
 
-      <div v-else-if="isSharedView" class="flex min-h-0 flex-1 flex-col">
+      <div
+        v-else-if="workspaceView === 'shared-with-me'"
+        class="flex min-h-0 flex-1 flex-col"
+      >
         <div class="fd-doc-header fd-immersive-header">
           <div class="fd-immersive-left">
             <button
@@ -3504,79 +3731,173 @@ function exportDocument(format: 'md' | 'pdf' | 'word') {
               </p>
             </div>
           </div>
-          <div v-if="workspaceView === 'my-shares' && sharedDocumentDetail" class="fd-immersive-actions">
+          <div v-if="sharedDocumentDetail" class="fd-immersive-actions">
             <button
               type="button"
               class="fd-icon-button"
-              :title="t('workspace.share')"
-              :aria-label="t('workspace.share')"
-              @click="openOwnedSharePanel"
+              :title="t('workspace.actions')"
+              :aria-label="t('workspace.actions')"
+              @click="isActionMenuOpen = !isActionMenuOpen"
             >
               <WorkspaceIcon name="settings" class="h-4 w-4" />
             </button>
           </div>
+          <div v-if="isActionMenuOpen && sharedDocumentDetail" class="fd-action-menu-panel">
+            <button
+              v-if="isFileDocument"
+              type="button"
+              class="fd-action-menu-item"
+              :title="t('workspace.copy')"
+              :aria-label="t('workspace.copy')"
+              @click="copyActiveDocumentContent"
+            >
+              <WorkspaceIcon name="copy" class="h-4 w-4" />
+            </button>
+            <button
+              v-if="isFileDocument"
+              type="button"
+              class="fd-action-menu-item"
+              :title="
+                isFullscreen
+                  ? t('workspace.exitFullscreen')
+                  : t('workspace.fullscreen')
+              "
+              :aria-label="
+                isFullscreen
+                  ? t('workspace.exitFullscreen')
+                  : t('workspace.fullscreen')
+              "
+              @click="toggleFullscreen"
+            >
+              <WorkspaceIcon name="fullscreen" class="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              class="fd-action-menu-item"
+              :title="t('workspace.docInfo')"
+              :aria-label="t('workspace.docInfo')"
+              @click="openDocumentInfoPanel"
+            >
+              <WorkspaceIcon name="info" class="h-4 w-4" />
+            </button>
+            <button
+              v-if="isFileDocument"
+              type="button"
+              class="fd-action-menu-item"
+              :title="t('workspace.export')"
+              :aria-label="t('workspace.export')"
+              @click="isExportMenuOpen = !isExportMenuOpen"
+            >
+              <WorkspaceIcon name="export" class="h-4 w-4" />
+            </button>
+            <div v-if="isExportMenuOpen" class="fd-action-submenu">
+              <button
+                type="button"
+                class="fd-action-submenu-item"
+                :title="t('workspace.exportMd')"
+                :aria-label="t('workspace.exportMd')"
+                @click="exportDocument('md')"
+              >
+                <WorkspaceIcon name="markdown" class="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                class="fd-action-submenu-item"
+                :title="t('workspace.exportPdf')"
+                :aria-label="t('workspace.exportPdf')"
+                @click="exportDocument('pdf')"
+              >
+                <WorkspaceIcon name="pdf" class="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                class="fd-action-submenu-item"
+                :title="t('workspace.exportWord')"
+                :aria-label="t('workspace.exportWord')"
+                @click="exportDocument('word')"
+              >
+                <WorkspaceIcon name="word" class="h-4 w-4" />
+              </button>
+            </div>
+          </div>
         </div>
 
         <div
-          v-if="isSharePanelOpen && sharedDocumentDetail && workspaceView === 'my-shares'"
+          v-if="isSharedView && isDocumentInfoOpen && activeActionDocument"
           class="fd-doc-info-modal-wrap"
           role="dialog"
           aria-modal="true"
-          :aria-label="t('workspace.shareDoc')"
+          :aria-label="t('workspace.docInfo')"
         >
           <button
             type="button"
             class="fd-doc-info-modal-backdrop"
             :aria-label="t('common.cancel')"
-            @click="isSharePanelOpen = false"
+            @click="isDocumentInfoOpen = false"
           />
           <div class="fd-doc-info-modal">
             <div class="fd-doc-info-modal-head">
-              <h3>{{ t('workspace.shareListTitle') }}</h3>
+              <h3>{{ t('workspace.docInfo') }}</h3>
               <button
                 type="button"
                 class="fd-icon-button"
                 :aria-label="t('common.cancel')"
                 :title="t('common.cancel')"
-                @click="isSharePanelOpen = false"
+                @click="isDocumentInfoOpen = false"
               >
                 <WorkspaceIcon name="close" class="h-4 w-4" />
               </button>
             </div>
-            <div class="mt-5 space-y-2">
-              <div
-                v-if="sharedDocumentRecipients.length === 0"
-                class="rounded-xl border border-dashed border-[rgba(31,41,55,0.14)] px-4 py-4 text-sm text-slate-500"
-              >
-                {{ t('workspace.mySharesEmpty') }}
-              </div>
-              <div
-                v-for="shareUser in sharedDocumentRecipients"
-                :key="`owned-share-modal-user-${shareUser.id}`"
-                class="flex items-center justify-between gap-3 rounded-xl border border-[rgba(31,41,55,0.08)] bg-[rgba(255,255,255,0.72)] px-4 py-3"
-              >
-                <div class="min-w-0">
-                  <p class="truncate text-sm font-medium text-slate-800">
-                    {{ shareUser.username }}
-                  </p>
-                </div>
-                <UButton
-                  color="neutral"
-                  variant="ghost"
-                  size="sm"
-                  :disabled="sharePending"
-                  @click="revokeOwnedSharedDocument(shareUser.id)"
-                >
-                  {{ t('workspace.shareRevoke') }}
-                </UButton>
-              </div>
+            <div class="fd-doc-info-grid">
+              <p class="fd-doc-info-label">
+                {{ t('workspace.docInfoSpace') }}
+              </p>
+              <p class="fd-doc-info-value" :title="activeActionDocumentSpaceLabel">
+                {{ activeActionDocumentSpaceLabel }}
+              </p>
+              <p class="fd-doc-info-label">
+                {{ t('workspace.docInfoFolder') }}
+              </p>
+              <p class="fd-doc-info-value" :title="activeActionDocumentFolderLabel">
+                {{ activeActionDocumentFolderLabel }}
+              </p>
+              <p class="fd-doc-info-label">
+                {{ t('workspace.docInfoCreatedAt') }}
+              </p>
+              <p class="fd-doc-info-value">
+                {{ formatTimestamp(activeActionDocument.createdAt) }}
+              </p>
+              <p class="fd-doc-info-label">
+                {{ t('workspace.docInfoCreatedBy') }}
+              </p>
+              <p class="fd-doc-info-value">
+                {{
+                  activeActionDocument.createdByName?.trim() ||
+                  t('workspace.unknownUpdater')
+                }}
+              </p>
+              <p class="fd-doc-info-label">
+                {{ t('workspace.docInfoUpdatedAt') }}
+              </p>
+              <p class="fd-doc-info-value">
+                {{ formatTimestamp(activeActionDocument.updatedAt) }}
+              </p>
+              <p class="fd-doc-info-label">
+                {{ t('workspace.docInfoUpdatedBy') }}
+              </p>
+              <p class="fd-doc-info-value">
+                {{
+                  activeActionDocument.updatedByName?.trim() ||
+                  t('workspace.unknownUpdater')
+                }}
+              </p>
+              <p class="fd-doc-info-label">
+                {{ t('workspace.docInfoFileSize') }}
+              </p>
+              <p class="fd-doc-info-value">
+                {{ activeActionDocumentFileSizeLabel }}
+              </p>
             </div>
-            <p v-if="shareError" class="mt-3 text-sm text-rose-600">
-              {{ shareError }}
-            </p>
-            <p v-if="shareMessage" class="mt-3 text-sm text-emerald-700">
-              {{ shareMessage }}
-            </p>
           </div>
         </div>
 

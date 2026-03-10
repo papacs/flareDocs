@@ -203,6 +203,8 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'workspace.exportPdfEngineMissing':
       'PDF 导出引擎加载失败。请检查网络，或改为本地引入 html2pdf 后重试。',
     'workspace.actions': '操作',
+    'workspace.copy': '复制内容',
+    'workspace.copyFailed': '复制失败，请稍后重试。',
     'workspace.readMode': '阅读模式',
     'workspace.editMode': '编辑模式',
     'workspace.saveStatusSaving': '保存中...',
@@ -210,6 +212,7 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'workspace.saveStatusError': '保存失败',
     'workspace.unknownUpdater': '未知用户',
     'workspace.docInfo': '文档信息',
+    'workspace.docInfoSpace': '工作区',
     'workspace.docInfoFolder': '目录',
     'workspace.docInfoCreatedAt': '创建时间',
     'workspace.docInfoCreatedBy': '创建人',
@@ -560,6 +563,8 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'workspace.exportPdfEngineMissing':
       'PDF export engine failed to load. Check network access or provide a local html2pdf script.',
     'workspace.actions': 'Actions',
+    'workspace.copy': 'Copy content',
+    'workspace.copyFailed': 'Copy failed. Please try again.',
     'workspace.readMode': 'Reading mode',
     'workspace.editMode': 'Editing mode',
     'workspace.saveStatusSaving': 'Saving...',
@@ -567,6 +572,7 @@ const messages: Record<AppLocale, Record<string, MessageValue>> = {
     'workspace.saveStatusError': 'Save failed',
     'workspace.unknownUpdater': 'Unknown user',
     'workspace.docInfo': 'Document info',
+    'workspace.docInfoSpace': 'Workspace',
     'workspace.docInfoFolder': 'Folder',
     'workspace.docInfoCreatedAt': 'Created at',
     'workspace.docInfoCreatedBy': 'Created by',
